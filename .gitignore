@@ -1,0 +1,62 @@
+# =============== #
+# Unity generated #
+# =============== #
+[Tt]emp/
+[Oo]bj/
+[Bb]uild
+/[Bb]uilds/
+/[Ll]ibrary/
+AssetBundles/Android/
+AssetBundles/iOS/
+sysinfo.txt
+*.stackdump
+/Assets/AssetStoreTools*
+*.apk
+ 
+# Jetbrain Rider Cache
+.idea/
+Assets/Plugins/Editor/JetBrains*
+
+
+# ===================================== #
+# Visual Studio / MonoDevelop generated #
+# ===================================== #
+[Ee]xported[Oo]bj/
+.vs/
+/*.userprefs
+/*.csproj
+/*.pidb
+*.pidb.meta
+/*.suo
+/*.sln*
+/*.user
+.consulo/
+/*.tmp
+/*.svd
+
+# ============ #
+# OS generated #
+# ============ #
+.DS_Store*
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+[Tt]humbs.db
+[Tt]humbs.db.meta
+[Dd]esktop.ini
+
+# =============== #
+# EDM4U generated #
+# =============== #
+Assets/Plugins/Android/*.aar
+Assets/Plugins/Android/*.aar.meta
+Assets/Plugins/Android/*.jar
+Assets/Plugins/Android/*.jar.meta
+
+# ======= #
+# Managed #
+# ======= #
+IgnoreSCM/
+Assets/IgnoreSCM/
+Assets/IgnoreSCM.meta
