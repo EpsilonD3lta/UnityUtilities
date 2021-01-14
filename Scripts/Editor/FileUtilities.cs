@@ -11,7 +11,7 @@ public class FileUtilities : Editor
         {
             string guid = Selection.assetGUIDs[0];
             GUIUtility.systemCopyBuffer = guid;
-            Debug.Log("GUID copied to clipboard: " + guid);
+            UnityEngine.Debug.Log("GUID copied to clipboard: " + guid);
         }
     }
 
