@@ -73,11 +73,17 @@ public class FileUtilities : Editor
         }
     }
 
-    private static string GIMPPath = "C:/Program Files/GIMP 2/bin/gimp-2.10.exe";
+    private static string GIMPBinFolderPath = "C:/Program Files/GIMP 2/bin/";
+    private static string GIMPPath = "";
 
     [MenuItem("Assets/File/Open In GIMP")]
     public static void OpenInGimp()
     {
+        if (string.IsNullOrEmpty(GIMPPath))
+        {
+            GIMPPath = Directory.GetFiles(GIMPBinFolderPath, "*.exe").FirstOrDefault(x => Regex.IsMatch(x, @"gimp-[0-9]+"));
+            if (string.IsNullOrEmpty(GIMPPath)) return;
+        }
         if (Selection.assetGUIDs.Length > 0)
         {
             string guid = Selection.assetGUIDs[0];
