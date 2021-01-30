@@ -1,5 +1,9 @@
 ﻿using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
 using UnityEditor;
+using UnityEditor.Callbacks;
 using UnityEngine;
 
 public class FileUtilities : Editor
@@ -97,5 +101,40 @@ public class FileUtilities : Editor
             };
             Process.Start(process);
         }
+    }
+
+    // Inspired by https://blog.kikicode.com/2018/12/double-click-fbx-files-to-import-to.html
+    private static string BlenderPath = "C:/Program Files/Blender Foundation/Blender 2.91/blender.exe";
+
+    [MenuItem("Assets/File/Open FBX in Blender")]
+    public static void OpenFBXInBlender()
+    {
+        if (Selection.assetGUIDs.Length > 0)
+        {
+            string guid = Selection.assetGUIDs[0];
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            // r'pathstring' - the parameter r means literal string
+            ProcessStartInfo process = new ProcessStartInfo(BlenderPath, " --python-expr  \"import bpy; bpy.context.preferences.view.show_splash = False; bpy.ops.import_scene.fbx(filepath = r'" + path + "'); \"")
+            {
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+                UseShellExecute = false
+            };
+            Process.Start(process);
+        }
+    }
+
+    [OnOpenAsset(1)]
+    public static bool OnOpenFBX(int instanceID, int line)
+    {
+        Object asset = EditorUtility.InstanceIDToObject(instanceID);
+        string assetPath = AssetDatabase.GetAssetPath(asset);
+        if (assetPath.EndsWith(".fbx", System.StringComparison.OrdinalIgnoreCase))
+        {
+            OpenFBXInBlender();
+            return true;
+        }
+        else return false;
     }
 }
