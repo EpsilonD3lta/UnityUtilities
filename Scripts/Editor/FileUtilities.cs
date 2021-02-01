@@ -137,4 +137,17 @@ public class FileUtilities : Editor
         }
         else return false;
     }
+
+    [OnOpenAsset(2)]
+    public static bool OnOpenImage(int instanceID, int line)
+    {
+        Object asset = EditorUtility.InstanceIDToObject(instanceID);
+        string assetPath = AssetDatabase.GetAssetPath(asset);
+        if (Regex.IsMatch(assetPath, @".*\.png$|.*\.jpg$|.*\.jpeg$", RegexOptions.IgnoreCase))
+        {
+            OpenInGimp();
+            return true;
+        }
+        else return false;
+    }
 }
