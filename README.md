@@ -1,9 +1,8 @@
 # UnityUtilities
 Collection of useful scripts for Unity.
 
-Scripts folder contains scripts created by me.
-
-ScriptsFromOthers folder contains scripts I found on the Internet, some of them I've modified. 
-Mind the licenses included at the top of the scripts/methods.
+Repository contains scripts created by me or, if stated at the beginning of a script, from others (some of them I might have modified).
+Mind the licenses stated at the beginning of each script or method (those are not mine). Scripts/methods without license at the beginning are mine
+and you can use those however you want.
 
 Note that there might be bugs, use at your own risk.
