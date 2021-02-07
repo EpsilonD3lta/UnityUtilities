@@ -4,6 +4,7 @@ public static class EditorExtensions
 {
     // Unity UI Extensions License (BSD3) Copyright (c) 2019
     // https://bitbucket.org/UnityUIExtensions/unity-ui-extensions/src/release/LICENSE.md
+    // License included in Licenses folder as BSD3_LICENSE_UnityUIExtensions.txt
     // Modified
     [MenuItem("CONTEXT/RectTransform/Anchors to Corners")]
     static void AnchorsToCorners(MenuCommand command)
@@ -38,6 +39,7 @@ public static class EditorExtensions
 
     // Unity UI Extensions License (BSD3) Copyright (c) 2019
     // https://bitbucket.org/UnityUIExtensions/unity-ui-extensions/src/release/LICENSE.md
+    // License included in Licenses folder BSD3_LICENSE_UnityUIExtensions.txt
     // Modified
     [MenuItem("CONTEXT/RectTransform/Corners to Anchors")]
     static void CornersToAnchors(MenuCommand command)
