@@ -19,19 +19,17 @@ public class FindAssetUsages : EditorWindow
         "*.mat",                // Materials
         "*.controller",         // Animation controller
         "*.overrideController", // Animation controller
+        "*.flare",              // Lens flare
+        "*.mask",               // Avatar mask
+        "*.preset",             // Preset
+        "*.shadergraph",        // Shadergraph
+        "*.shadersubgraph"      // Shadersubgraph
     };
 
     public List<string> assets = new List<string>();
     public string assetGUID = null;
 
     public bool canceled = false;
-
-    [MenuItem("Tools/Asset Usage")]
-    public static void OpenUsageWindow()
-    {
-        var window = GetWindow<FindAssetUsages>("Asset Usage");
-        window.Show();
-    }
 
     [MenuItem("Assets/Find Asset Usage _#F12")]
     public static void FindAssetUsage()

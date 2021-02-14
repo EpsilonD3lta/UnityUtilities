@@ -1,6 +1,5 @@
-﻿using System.Collections;
+﻿using System.Linq;
 using System.Reflection;
-using System.Linq;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -9,47 +8,48 @@ using UnityEngine;
 /// <summary>
 /// A helper editor script for finding missing references to objects.
 /// </summary>
-public class MissingReferencesFinder : MonoBehaviour
+public class FindMissingReferences
 {
-	private const string MENU_ROOT = "Tools/Missing References/";
+	private const string MENU_ROOT = "Tools/Find Missing References/";
 
 	/// <summary>
 	/// Finds all missing references to objects in the currently loaded scene.
 	/// </summary>
 	[MenuItem(MENU_ROOT + "Search in scene", false)]
-	public static void FindMissingReferencesInCurrentScene()
+	public static void FindMissingRefsInCurrentScene()
 	{
 		var sceneObjects = GetSceneObjects();
-		FindMissingReferences(EditorSceneManager.GetActiveScene().path, sceneObjects);
+		FindMissingRefs(EditorSceneManager.GetActiveScene().path, sceneObjects);
+		Debug.Log("FindMissingReferences finished scene");
 	}
 
 	/// <summary>
 	/// Finds all missing references to objects in all enabled scenes in the project.
 	/// This works by loading the scenes one by one and checking for missing object references.
 	/// </summary>
-	[MenuItem(MENU_ROOT + "Search in all scenes", false, 51)]
-	public static void FindMissingReferencesInAllScenes()
+	[MenuItem(MENU_ROOT + "Search in all scenes", false, 1)]
+	public static void FindMissingRefsInAllScenes()
 	{
 		foreach (var scene in EditorBuildSettings.scenes.Where(s => s.enabled))
 		{
 			EditorSceneManager.OpenScene(scene.path);
-			FindMissingReferencesInCurrentScene();
+			FindMissingRefsInCurrentScene();
 		}
 	}
 
 	/// <summary>
 	/// Finds all missing references to objects in assets (objects from the project window).
 	/// </summary>
-	[MenuItem(MENU_ROOT + "Search in assets", false, 52)]
+	[MenuItem(MENU_ROOT + "Search in assets", false, 2)]
 	public static void FindMissingReferencesInAssets()
 	{
 		var allAssets = AssetDatabase.GetAllAssetPaths().Where(path => path.StartsWith("Assets/")).ToArray();
 		var objs = allAssets.Select(a => AssetDatabase.LoadAssetAtPath(a, typeof(GameObject)) as GameObject).Where(a => a != null).ToArray();
 
-		FindMissingReferences("Project", objs);
+		FindMissingRefs("Project", objs);
 	}
 
-	private static void FindMissingReferences(string context, GameObject[] gameObjects)
+	private static void FindMissingRefs(string context, GameObject[] gameObjects)
 	{
 		if (gameObjects == null)
 		{

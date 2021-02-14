@@ -7,19 +7,13 @@ using UnityEngine.SceneManagement;
 
 // Modified from: http://wiki.unity3d.com/index.php?title=FindMissingScripts&oldid=17367
 // License: Content is available under Creative Commons Attribution Share Alike https://www.apache.org/licenses/LICENSE-2.0
-public class FindMissingScriptsEditor : EditorWindow
+public class FindMissingScripts : EditorWindow
 {
     string folderPath = "";
-    [MenuItem("Tools/Find Missing Scripts/Find")]
-    public static void FindMissingScripts()
+    [MenuItem("Tools/Find Missing Scripts")]
+    public static void FindMissingScriptsShow()
     {
-        EditorWindow.GetWindow(typeof(FindMissingScriptsEditor));
-    }
-
-    [MenuItem("Tools/Find Missing Scripts/Clear Progressbar")]
-    public static void ClearProgressbar()
-    {
-        EditorUtility.ClearProgressBar();
+        EditorWindow.GetWindow(typeof(FindMissingScripts));
     }
 
     static int missingCount = -1;
