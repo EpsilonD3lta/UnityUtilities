@@ -11,19 +11,22 @@ public class FindAssetUsages : EditorWindow
 {
     private static readonly string[] extensions =
     {
-        "*.prefab",             // Prefabs
-        "*.meta",               // Meta files for all assets
-        "*.spriteatlas",        // Sprite atlases
-        "*.asset",              // Custom assets
-        "*.unity",              // Scenes
-        "*.mat",                // Materials
-        "*.controller",         // Animation controller
-        "*.overrideController", // Animation controller
-        "*.flare",              // Lens flare
-        "*.mask",               // Avatar mask
-        "*.preset",             // Preset
-        "*.shadergraph",        // Shadergraph
-        "*.shadersubgraph"      // Shadersubgraph
+        "*.prefab",
+        "*.meta",
+        "*.spriteatlas",
+        "*.asset",
+        "*.unity",
+        "*.mat",
+        "*.controller",
+        "*.overrideController",
+        "*.flare",
+        "*.mask",
+        "*.preset",
+        "*.shadergraph",
+        "*.shadersubgraph",
+        "*.terrainlayer",
+        "*.brush"
+
     };
 
     public List<string> assets = new List<string>();
