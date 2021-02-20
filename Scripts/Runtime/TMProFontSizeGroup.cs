@@ -23,7 +23,7 @@ public class TMProFontSizeGroup : MonoBehaviour
             tmpText.enableAutoSizing = false;
         }
 
-        SetFontsize();
+        SetFontSize();
     }
 
     private void OnEnable()
@@ -39,9 +39,10 @@ public class TMProFontSizeGroup : MonoBehaviour
     private void ReactToTextChanged(Object obj)
     {
         TMP_Text tmpText = obj as TMP_Text;
-        if (tmpText != null && tmpTexts.Contains(tmpText) && !isForceUpdatingMesh) SetFontsize();
+        if (tmpText != null && tmpTexts.Contains(tmpText) && !isForceUpdatingMesh) SetFontSize();
     }
-    private void SetFontsize()
+
+    private void SetFontSize()
     {
         if (tmpTexts == null || tmpTexts.Count == 0) return;
         // Iterate over each of the text objects in the array to find a good test candidate
