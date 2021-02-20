@@ -58,6 +58,7 @@ Assets/Plugins/Android/*.jar.meta
 # Managed #
 # ======= #
 IgnoreSCM/
+ExternalAssets/
 *.unity
 *.meta
 Assets/IgnoreSCM/
