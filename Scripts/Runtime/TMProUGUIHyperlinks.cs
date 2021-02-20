@@ -9,7 +9,7 @@ using UnityEngine.EventSystems;
 /// </summary>
 [DisallowMultipleComponent()]
 [RequireComponent(typeof(TextMeshProUGUI))]
-public class TextMeshProUGUIHyperlinks : MonoBehaviour, IPointerDownHandler, IPointerUpHandler
+public class TMProUGUIHyperlinks : MonoBehaviour, IPointerDownHandler, IPointerUpHandler
 {
     [SerializeField]
     private Color32 hoveredColor = new Color32(0x00, 0x59, 0xFF, 0xFF);
