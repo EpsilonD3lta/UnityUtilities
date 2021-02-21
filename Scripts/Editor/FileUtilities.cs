@@ -150,4 +150,18 @@ public class FileUtilities : Editor
         }
         else return false;
     }
+
+    [OnOpenAsset(3)]
+    public static bool OnOpenText(int instanceID, int line)
+    {
+        Object asset = EditorUtility.InstanceIDToObject(instanceID);
+        string assetPath = AssetDatabase.GetAssetPath(asset);
+        // Last expression of the regex is for files without '.' in the name == no file extension
+        if (Regex.IsMatch(assetPath, @".*\.txt$|.*\.json$|.*\.md$|^([^.]+)$", RegexOptions.IgnoreCase))
+        {
+            OpenAsTextfile();
+            return true;
+        }
+        else return false;
+    }
 }
