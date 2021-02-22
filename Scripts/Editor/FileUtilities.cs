@@ -8,7 +8,7 @@ using UnityEngine;
 
 public class FileUtilities : Editor
 {
-    [MenuItem("Assets/File/Copy GUID")]
+    [MenuItem("Assets/File/Copy GUID %#c")]
     public static void CopyGuid()
     {
         if (Selection.assetGUIDs.Length > 0)
@@ -123,6 +123,30 @@ public class FileUtilities : Editor
             };
             Process.Start(process);
         }
+    }
+
+    [OnOpenAsset(0)]
+    public static bool OnOpenWithModifiers(int instanceID, int line)
+    {
+        if (Event.current.modifiers == EventModifiers.None) return false;
+        if (Event.current.modifiers == EventModifiers.Alt)
+        {
+            OpenAsTextfile();
+            return true;
+        }
+        else if (Event.current.modifiers == EventModifiers.Shift)
+        {
+            OpenMetafile();
+            return true;
+        }
+        else if (Event.current.modifiers == (EventModifiers.Alt | EventModifiers.Command))
+        {
+            Object asset = EditorUtility.InstanceIDToObject(instanceID);
+            string assetPath = AssetDatabase.GetAssetPath(asset);
+            EditorUtility.RevealInFinder(assetPath);
+            return true;
+        }
+        else return false;
     }
 
     [OnOpenAsset(1)]
