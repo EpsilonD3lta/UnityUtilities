@@ -5,7 +5,7 @@ using UnityEngine.EventSystems;
 
 /// <summary>
 /// This class handles basic link color behavior, supports also underline
-/// Does not support strike-through, but can be easily implemented in the same way as underline
+/// Does not support strike-through, but can be easily implemented in the same way as the underline
 /// </summary>
 [DisallowMultipleComponent()]
 [RequireComponent(typeof(TextMeshProUGUI))]
@@ -95,7 +95,7 @@ public class TMProUGUIHyperlinks : MonoBehaviour, IPointerDownHandler, IPointerU
     {
         TMP_LinkInfo linkInfo = textMeshPro.textInfo.linkInfo[linkIndex];
 
-        var oldVertColors = new List<Color32[]>(); // Store the old character colors
+        var oldVertexColors = new List<Color32[]>(); // Store the old character colors
         int underlineIndex = -1;
         for (int i = 0; i < linkInfo.linkTextLength; i++)
         {
@@ -107,7 +107,7 @@ public class TMProUGUIHyperlinks : MonoBehaviour, IPointerDownHandler, IPointerU
 
             // This array contains colors for all vertices of the mesh (might be multiple chars)
             Color32[] vertexColors = textMeshPro.textInfo.meshInfo[meshIndex].colors32;
-            oldVertColors.Add(new Color32[] { vertexColors[vertexIndex + 0], vertexColors[vertexIndex + 1], vertexColors[vertexIndex + 2], vertexColors[vertexIndex + 3] });
+            oldVertexColors.Add(new Color32[] { vertexColors[vertexIndex + 0], vertexColors[vertexIndex + 1], vertexColors[vertexIndex + 2], vertexColors[vertexIndex + 3] });
             if (charInfo.isVisible)
             {
                 vertexColors[vertexIndex + 0] = color;
@@ -128,7 +128,7 @@ public class TMProUGUIHyperlinks : MonoBehaviour, IPointerDownHandler, IPointerU
         }
 
         textMeshPro.UpdateVertexData(TMP_VertexDataUpdateFlags.All);
-        return oldVertColors;
+        return oldVertexColors;
     }
 
     private void ResetLinkColor(int linkIndex, List<Color32[]> startColors)
@@ -137,10 +137,10 @@ public class TMProUGUIHyperlinks : MonoBehaviour, IPointerDownHandler, IPointerU
         int underlineIndex = -1;
         for (int i = 0; i < linkInfo.linkTextLength; i++)
         {
-            int characterIndex = linkInfo.linkTextfirstCharacterIndex + i; // the character index into the entire text
+            int characterIndex = linkInfo.linkTextfirstCharacterIndex + i;
             var charInfo = textMeshPro.textInfo.characterInfo[characterIndex];
-            int meshIndex = charInfo.materialReferenceIndex; // Get the index of the material / sub text object used by this character.
-            int vertexIndex = charInfo.vertexIndex; // Get the index of the first vertex of this character.
+            int meshIndex = charInfo.materialReferenceIndex;
+            int vertexIndex = charInfo.vertexIndex;
 
             Color32[] vertexColors = textMeshPro.textInfo.meshInfo[meshIndex].colors32;
             if (charInfo.isVisible)
