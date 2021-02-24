@@ -44,11 +44,19 @@ public class TMProUGUIHyperlinks : MonoBehaviour, IPointerDownHandler, IPointerU
         if (linkIndex != -1) // Was pointer intersecting a link?
         {
             pressedLinkIndex = linkIndex;
-            if (usedLinks.TryGetValue(linkIndex, out bool isUsed) && isUsed)
+            if (usedLinks.TryGetValue(linkIndex, out bool isUsed) && isUsed) // Has the link been already used?
             {
-                SetLinkToColor(linkIndex, usedPressedColor);
+                // Have we hovered before we pressed? Touch input will first press, then hover
+                if (pressedLinkIndex != hoveredLinkIndex) startColors = SetLinkToColor(linkIndex, usedPressedColor);
+                else SetLinkToColor(linkIndex, usedPressedColor);
             }
-            else SetLinkToColor(linkIndex, pressedColor);
+            else
+            {
+                // Have we hovered before we pressed? Touch input will first press, then hover
+                if (pressedLinkIndex != hoveredLinkIndex) startColors = SetLinkToColor(linkIndex, pressedColor);
+                else SetLinkToColor(linkIndex, pressedColor);
+            }
+            hoveredLinkIndex = pressedLinkIndex; // Changes flow in LateUpdate
         }
         else pressedLinkIndex = -1;
     }
@@ -72,18 +80,25 @@ public class TMProUGUIHyperlinks : MonoBehaviour, IPointerDownHandler, IPointerU
         int linkIndex = GetLinkIndex();
         if (linkIndex != -1) // Was pointer intersecting a link?
         {
-            if (linkIndex != hoveredLinkIndex)
+            if (linkIndex != hoveredLinkIndex) // We started hovering above link (hover can be set from OnPointerDown!)
             {
-                if (hoveredLinkIndex != -1) ResetLinkColor(hoveredLinkIndex, startColors);
+                if (hoveredLinkIndex != -1) ResetLinkColor(hoveredLinkIndex, startColors); // If we hovered above other link before
                 hoveredLinkIndex = linkIndex;
-                if (usedLinks.TryGetValue(linkIndex, out bool isUsed) && isUsed)
+                if (usedLinks.TryGetValue(linkIndex, out bool isUsed) && isUsed) // Has the link been already used?
                 {
-                    startColors = SetLinkToColor(hoveredLinkIndex, usedHoveredColor);
+                    // If we have pressed on link, wandered away and came back, set the pressed color
+                    if (pressedLinkIndex == linkIndex) startColors = SetLinkToColor(hoveredLinkIndex, usedPressedColor);
+                    else startColors = SetLinkToColor(hoveredLinkIndex, usedHoveredColor);
                 }
-                else startColors = SetLinkToColor(hoveredLinkIndex, hoveredColor);
+                else
+                {
+                    // If we have pressed on link, wandered away and came back, set the pressed color
+                    if (pressedLinkIndex == linkIndex) startColors = SetLinkToColor(hoveredLinkIndex, pressedColor);
+                    else startColors = SetLinkToColor(hoveredLinkIndex, hoveredColor);
+                }
             }
         }
-        else if (hoveredLinkIndex != -1)
+        else if (hoveredLinkIndex != -1) // If we hovered above other link before
         {
             ResetLinkColor(hoveredLinkIndex, startColors);
             hoveredLinkIndex = -1;
