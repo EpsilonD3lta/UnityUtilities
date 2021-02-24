@@ -26,6 +26,7 @@ public class TMProUGUIHyperlinks : MonoBehaviour, IPointerDownHandler, IPointerU
     private TextMeshProUGUI textMeshPro;
     private Dictionary<int, bool> usedLinks = new Dictionary<int, bool>();
     private int hoveredLinkIndex = -1;
+    private int pressedLinkIndex = -1;
     private Camera mainCamera;
 
     void Awake()
@@ -42,18 +43,20 @@ public class TMProUGUIHyperlinks : MonoBehaviour, IPointerDownHandler, IPointerU
         int linkIndex = GetLinkIndex();
         if (linkIndex != -1) // Was pointer intersecting a link?
         {
+            pressedLinkIndex = linkIndex;
             if (usedLinks.TryGetValue(linkIndex, out bool isUsed) && isUsed)
             {
-                SetLinkToColor(hoveredLinkIndex, usedPressedColor);
+                SetLinkToColor(linkIndex, usedPressedColor);
             }
-            else SetLinkToColor(hoveredLinkIndex, pressedColor);
+            else SetLinkToColor(linkIndex, pressedColor);
         }
+        else pressedLinkIndex = -1;
     }
 
     public void OnPointerUp(PointerEventData eventData)
     {
         int linkIndex = GetLinkIndex();
-        if (linkIndex != -1) // Was pointer intersecting a link?
+        if (linkIndex != -1 && linkIndex == pressedLinkIndex) // Was pointer intersecting the same link as OnPointerDown?
         {
             TMP_LinkInfo linkInfo = textMeshPro.textInfo.linkInfo[linkIndex];
             SetLinkToColor(linkIndex, usedHoveredColor);
@@ -61,6 +64,7 @@ public class TMProUGUIHyperlinks : MonoBehaviour, IPointerDownHandler, IPointerU
             usedLinks[linkIndex] = true;
             Application.OpenURL(linkInfo.GetLinkID());
         }
+        pressedLinkIndex = -1;
     }
 
     private void LateUpdate()
@@ -115,9 +119,8 @@ public class TMProUGUIHyperlinks : MonoBehaviour, IPointerDownHandler, IPointerU
                 vertexColors[vertexIndex + 2] = color;
                 vertexColors[vertexIndex + 3] = color;
             }
-
             // Each line will have its own underline mesh with different index, index == 0 means there is no underline
-            if (charInfo.underlineVertexIndex > 0 && charInfo.underlineVertexIndex != underlineIndex && charInfo.underlineVertexIndex < vertexColors.Length)
+            if (charInfo.isVisible && charInfo.underlineVertexIndex > 0 && charInfo.underlineVertexIndex != underlineIndex && charInfo.underlineVertexIndex < vertexColors.Length)
             {
                 underlineIndex = charInfo.underlineVertexIndex;
                 for (int j = 0; j < 12; j++) // Underline seems to be always 3 quads = 12 vertices
@@ -150,7 +153,7 @@ public class TMProUGUIHyperlinks : MonoBehaviour, IPointerDownHandler, IPointerU
                 vertexColors[vertexIndex + 2] = startColors[i][2];
                 vertexColors[vertexIndex + 3] = startColors[i][3];
             }
-            if (charInfo.underlineVertexIndex > 0 && charInfo.underlineVertexIndex != underlineIndex && charInfo.underlineVertexIndex < vertexColors.Length)
+            if (charInfo.isVisible && charInfo.underlineVertexIndex > 0 && charInfo.underlineVertexIndex != underlineIndex && charInfo.underlineVertexIndex < vertexColors.Length)
             {
                 underlineIndex = charInfo.underlineVertexIndex;
                 for (int j = 0; j < 12; j++)
