@@ -139,7 +139,7 @@ public class FileUtilities : Editor
             OpenMetafile();
             return true;
         }
-        else if (Event.current.modifiers == (EventModifiers.Alt | EventModifiers.Command))
+        else if (Event.current.modifiers == (EventModifiers.Alt | EventModifiers.Command)) // Command == Windows key
         {
             Object asset = EditorUtility.InstanceIDToObject(instanceID);
             string assetPath = AssetDatabase.GetAssetPath(asset);

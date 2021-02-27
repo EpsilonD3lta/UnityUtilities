@@ -47,14 +47,14 @@ public class TMProUGUIHyperlinks : MonoBehaviour, IPointerDownHandler, IPointerU
             if (usedLinks.TryGetValue(linkIndex, out bool isUsed) && isUsed) // Has the link been already used?
             {
                 // Have we hovered before we pressed? Touch input will first press, then hover
-                if (pressedLinkIndex != hoveredLinkIndex) startColors = SetLinkToColor(linkIndex, usedPressedColor);
-                else SetLinkToColor(linkIndex, usedPressedColor);
+                if (pressedLinkIndex != hoveredLinkIndex) startColors = SetLinkColor(linkIndex, usedPressedColor);
+                else SetLinkColor(linkIndex, usedPressedColor);
             }
             else
             {
                 // Have we hovered before we pressed? Touch input will first press, then hover
-                if (pressedLinkIndex != hoveredLinkIndex) startColors = SetLinkToColor(linkIndex, pressedColor);
-                else SetLinkToColor(linkIndex, pressedColor);
+                if (pressedLinkIndex != hoveredLinkIndex) startColors = SetLinkColor(linkIndex, pressedColor);
+                else SetLinkColor(linkIndex, pressedColor);
             }
             hoveredLinkIndex = pressedLinkIndex; // Changes flow in LateUpdate
         }
@@ -67,7 +67,7 @@ public class TMProUGUIHyperlinks : MonoBehaviour, IPointerDownHandler, IPointerU
         if (linkIndex != -1 && linkIndex == pressedLinkIndex) // Was pointer intersecting the same link as OnPointerDown?
         {
             TMP_LinkInfo linkInfo = textMeshPro.textInfo.linkInfo[linkIndex];
-            SetLinkToColor(linkIndex, usedHoveredColor);
+            SetLinkColor(linkIndex, usedHoveredColor);
             startColors.ForEach(c => c[0] = c[1] = c[2] = c[3] = usedColor);
             usedLinks[linkIndex] = true;
             Application.OpenURL(linkInfo.GetLinkID());
@@ -87,14 +87,14 @@ public class TMProUGUIHyperlinks : MonoBehaviour, IPointerDownHandler, IPointerU
                 if (usedLinks.TryGetValue(linkIndex, out bool isUsed) && isUsed) // Has the link been already used?
                 {
                     // If we have pressed on link, wandered away and came back, set the pressed color
-                    if (pressedLinkIndex == linkIndex) startColors = SetLinkToColor(hoveredLinkIndex, usedPressedColor);
-                    else startColors = SetLinkToColor(hoveredLinkIndex, usedHoveredColor);
+                    if (pressedLinkIndex == linkIndex) startColors = SetLinkColor(hoveredLinkIndex, usedPressedColor);
+                    else startColors = SetLinkColor(hoveredLinkIndex, usedHoveredColor);
                 }
                 else
                 {
                     // If we have pressed on link, wandered away and came back, set the pressed color
-                    if (pressedLinkIndex == linkIndex) startColors = SetLinkToColor(hoveredLinkIndex, pressedColor);
-                    else startColors = SetLinkToColor(hoveredLinkIndex, hoveredColor);
+                    if (pressedLinkIndex == linkIndex) startColors = SetLinkColor(hoveredLinkIndex, pressedColor);
+                    else startColors = SetLinkColor(hoveredLinkIndex, hoveredColor);
                 }
             }
         }
@@ -110,7 +110,7 @@ public class TMProUGUIHyperlinks : MonoBehaviour, IPointerDownHandler, IPointerU
         return TMP_TextUtilities.FindIntersectingLink(textMeshPro, Input.mousePosition, mainCamera);
     }
 
-    private List<Color32[]> SetLinkToColor(int linkIndex, Color32 color)
+    private List<Color32[]> SetLinkColor(int linkIndex, Color32 color)
     {
         TMP_LinkInfo linkInfo = textMeshPro.textInfo.linkInfo[linkIndex];
 
