@@ -79,6 +79,11 @@ public class FindAssetUsages : EditorWindow
         string path = AssetDatabase.GUIDToAssetPath(guid);
         foreach (string file in allFiles)
         {
+            if (!File.Exists(file))
+            {
+                Debug.LogWarning($"File does not exist, path too long? Path: {file}");
+                continue;
+            }
             var assetFile = new FileInfo(file);
             if (EditorUtility.DisplayCancelableProgressBar("Searching...", "Searching for asset references", current / (float)total))
             {

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEditor.Callbacks;
+using UnityEditorInternal;
 using UnityEngine;
 
 public class FileUtilities : Editor
@@ -15,7 +16,8 @@ public class FileUtilities : Editor
         {
             string guid = Selection.assetGUIDs[0];
             GUIUtility.systemCopyBuffer = guid;
-            UnityEngine.Debug.Log("GUID copied to clipboard: " + guid);
+            string assetName = Path.GetFileName(AssetDatabase.GUIDToAssetPath(guid));
+            UnityEngine.Debug.Log($"{assetName} copied to clipboard: {guid}");
         }
     }
 
@@ -150,6 +152,19 @@ public class FileUtilities : Editor
     }
 
     [OnOpenAsset(1)]
+    public static bool OnOpenFolder(int instanceID, int line)
+    {
+        Object asset = EditorUtility.InstanceIDToObject(instanceID);
+        string assetPath = AssetDatabase.GetAssetPath(asset);
+        if (AssetDatabase.IsValidFolder(assetPath))
+        {
+            EditorUtility.RevealInFinder(assetPath);
+            return true;
+        }
+        else return false;
+    }
+
+    [OnOpenAsset(2)]
     public static bool OnOpenFBX(int instanceID, int line)
     {
         Object asset = EditorUtility.InstanceIDToObject(instanceID);
@@ -162,7 +177,7 @@ public class FileUtilities : Editor
         else return false;
     }
 
-    [OnOpenAsset(2)]
+    [OnOpenAsset(3)]
     public static bool OnOpenImage(int instanceID, int line)
     {
         Object asset = EditorUtility.InstanceIDToObject(instanceID);
@@ -175,7 +190,7 @@ public class FileUtilities : Editor
         else return false;
     }
 
-    [OnOpenAsset(3)]
+    [OnOpenAsset(4)]
     public static bool OnOpenText(int instanceID, int line)
     {
         Object asset = EditorUtility.InstanceIDToObject(instanceID);
@@ -184,6 +199,30 @@ public class FileUtilities : Editor
         if (Regex.IsMatch(assetPath, @".*\.txt$|.*\.json$|.*\.md$|^([^.]+)$", RegexOptions.IgnoreCase))
         {
             OpenAsTextfile();
+            return true;
+        }
+        else return false;
+    }
+
+    // Does not work in two columns layout, maybe could be invoked from EditorApplication.update
+    public static bool OnOpenFolder2(int instanceID, int line)
+    {
+        Object asset = EditorUtility.InstanceIDToObject(instanceID);
+        string assetPath = AssetDatabase.GetAssetPath(asset);
+        if (AssetDatabase.IsValidFolder(assetPath))
+        {
+            int[] expandedFolders = InternalEditorUtility.expandedProjectWindowItems;
+            bool isExpanded = expandedFolders.Contains(instanceID);
+            EditorWindow focusedWindow = EditorWindow.focusedWindow;
+            if (focusedWindow != null)
+            {
+                focusedWindow.SendEvent(new Event
+                {
+                    keyCode = isExpanded ? KeyCode.LeftArrow : KeyCode.RightArrow,
+                    type = EventType.KeyDown,
+                    alt = Event.current.modifiers == EventModifiers.Alt
+                });
+            }
             return true;
         }
         else return false;
