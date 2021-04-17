@@ -127,6 +127,31 @@ public class FileUtilities : Editor
         }
     }
 
+    private static string CygwinPath = "C:/cygwin64/bin/mintty.exe";
+    [MenuItem("Assets/File/Open Cygwin here")]
+    public static void OpenCygwinHere()
+    {
+        if (Selection.assetGUIDs.Length > 0)
+        {
+            string guid = Selection.assetGUIDs[0];
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            if (!AssetDatabase.IsValidFolder(path))
+            {
+                path = path.Substring(0, path.LastIndexOf('/') + 1);
+            }
+            path = Application.dataPath.Substring(0, Application.dataPath.Length - "Assets".Length) + path;
+            Debug.Log($"Opening Cygwin in: {path}");
+            ProcessStartInfo process = new ProcessStartInfo(CygwinPath, "/bin/sh -lc 'cd " + path + "; exec bash'")
+            {
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+                UseShellExecute = false
+            };
+            Process.Start(process);
+        }
+    }
+
     [OnOpenAsset(0)]
     public static bool OnOpenWithModifiers(int instanceID, int line)
     {
@@ -196,7 +221,7 @@ public class FileUtilities : Editor
         Object asset = EditorUtility.InstanceIDToObject(instanceID);
         string assetPath = AssetDatabase.GetAssetPath(asset);
         // Last expression of the regex is for files without '.' in the name == no file extension
-        if (Regex.IsMatch(assetPath, @".*\.txt$|.*\.json$|.*\.md$|^([^.]+)$", RegexOptions.IgnoreCase))
+        if (Regex.IsMatch(assetPath, @".*\.txt$|.*\.json$|.*\.md$|.*\.java$|.*\.mm$|^([^.]+)$", RegexOptions.IgnoreCase))
         {
             OpenAsTextfile();
             return true;
