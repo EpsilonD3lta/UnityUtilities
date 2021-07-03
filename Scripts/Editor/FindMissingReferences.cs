@@ -65,7 +65,7 @@ public class FindMissingReferences
 				// Missing components will be null, we can't find their type, etc.
 				if (!component)
 				{
-					Debug.LogErrorFormat(go, $"Missing Component {0} in GameObject: {1}", component.GetType().FullName, GetFullPath(go));
+					Debug.LogError($"Missing Component in GameObject: {GetFullPath(go)}", go);
 
 					continue;
 				}

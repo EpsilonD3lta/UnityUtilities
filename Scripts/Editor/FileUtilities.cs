@@ -9,6 +9,13 @@ using UnityEngine;
 
 public class FileUtilities : Editor
 {
+
+    [MenuItem("Assets/Recompile Scripts")]
+    public static void RecompileScripts()
+    {
+        UnityEditor.Compilation.CompilationPipeline.RequestScriptCompilation();
+    }
+
     [MenuItem("Assets/File/Copy GUID %#c")]
     public static void CopyGuid()
     {
@@ -17,7 +24,7 @@ public class FileUtilities : Editor
             string guid = Selection.assetGUIDs[0];
             GUIUtility.systemCopyBuffer = guid;
             string assetName = Path.GetFileName(AssetDatabase.GUIDToAssetPath(guid));
-            UnityEngine.Debug.Log($"{assetName} copied to clipboard: {guid}");
+            UnityEngine.Debug.Log($"{assetName} GUID copied to clipboard: {guid}");
         }
     }
 
@@ -26,37 +33,43 @@ public class FileUtilities : Editor
     [MenuItem("Assets/File/Open as Textfile")]
     public static void OpenAsTextfile()
     {
-        if (Selection.assetGUIDs.Length > 0)
+        foreach (string guid in Selection.assetGUIDs)
         {
-            string guid = Selection.assetGUIDs[0];
-            string path = AssetDatabase.GUIDToAssetPath(guid);
-            ProcessStartInfo process = new ProcessStartInfo(VisualStudioPath, "/edit \"" + path + "\"")
-            {
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true,
-                UseShellExecute = false
-            };
-            Process.Start(process);
+            OpenAsTextfile(AssetDatabase.GUIDToAssetPath(guid));
         }
+    }
+
+    public static void OpenAsTextfile(string path)
+    {
+        ProcessStartInfo process = new ProcessStartInfo(VisualStudioPath, "/edit \"" + path + "\"")
+        {
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true,
+            UseShellExecute = false
+        };
+        Process.Start(process);
     }
 
     [MenuItem("Assets/File/Open Metafile")]
     public static void OpenMetafile()
     {
-        if (Selection.assetGUIDs.Length > 0)
+        foreach (string guid in Selection.assetGUIDs)
         {
-            string guid = Selection.assetGUIDs[0];
-            string path = AssetDatabase.GUIDToAssetPath(guid);
-            ProcessStartInfo process = new ProcessStartInfo(VisualStudioPath, "/edit \"" + path + ".meta\"")
-            {
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true,
-                UseShellExecute = false
-            };
-            Process.Start(process);
+            OpenMetafile(AssetDatabase.GUIDToAssetPath(guid));
         }
+    }
+
+    public static void OpenMetafile(string path)
+    {
+        ProcessStartInfo process = new ProcessStartInfo(VisualStudioPath, "/edit \"" + path + ".meta\"")
+        {
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true,
+            UseShellExecute = false
+        };
+        Process.Start(process);
     }
 
     private static string GExtensionsPath = "C:/Program Files (x86)/GitExtensions/GitExtensions.exe";
@@ -64,10 +77,12 @@ public class FileUtilities : Editor
     [MenuItem("Assets/File/File History GE")]
     public static void FileHistoryGitExtensions()
     {
-        if (Selection.assetGUIDs.Length > 0)
+        foreach (string guid in Selection.assetGUIDs)
         {
-            string guid = Selection.assetGUIDs[0];
             string path = AssetDatabase.GUIDToAssetPath(guid);
+            path = path.Substring(6, path.Length - 6); //Remove "Assets" because Application.dataPath also contains it.
+            path = Application.dataPath + path;
+            UnityEngine.Debug.Log("File History: " + path);
             ProcessStartInfo process = new ProcessStartInfo(GExtensionsPath, " filehistory \"" + path + "\"")
             {
                 RedirectStandardOutput = true,
@@ -85,24 +100,27 @@ public class FileUtilities : Editor
     [MenuItem("Assets/File/Open In GIMP")]
     public static void OpenInGimp()
     {
+        foreach (string guid in Selection.assetGUIDs)
+        {
+            OpenInGimp(AssetDatabase.GUIDToAssetPath(guid));
+        }
+    }
+
+    public static void OpenInGimp(string path)
+    {
         if (string.IsNullOrEmpty(GIMPPath))
         {
             GIMPPath = Directory.GetFiles(GIMPBinFolderPath, "*.exe").FirstOrDefault(x => Regex.IsMatch(x, @"gimp-[0-9]+"));
             if (string.IsNullOrEmpty(GIMPPath)) return;
         }
-        if (Selection.assetGUIDs.Length > 0)
+        ProcessStartInfo process = new ProcessStartInfo(GIMPPath, "\"" + path + "\"")
         {
-            string guid = Selection.assetGUIDs[0];
-            string path = AssetDatabase.GUIDToAssetPath(guid);
-            ProcessStartInfo process = new ProcessStartInfo(GIMPPath, "\"" + path + "\"")
-            {
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true,
-                UseShellExecute = false
-            };
-            Process.Start(process);
-        }
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true,
+            UseShellExecute = false
+        };
+        Process.Start(process);
     }
 
     // Inspired by https://blog.kikicode.com/2018/12/double-click-fbx-files-to-import-to.html
@@ -111,36 +129,38 @@ public class FileUtilities : Editor
     [MenuItem("Assets/File/Open FBX in Blender")]
     public static void OpenFBXInBlender()
     {
-        if (Selection.assetGUIDs.Length > 0)
+        foreach (string guid in Selection.assetGUIDs)
         {
-            string guid = Selection.assetGUIDs[0];
-            string path = AssetDatabase.GUIDToAssetPath(guid);
-            // r'pathstring' - the parameter r means literal string
-            ProcessStartInfo process = new ProcessStartInfo(BlenderPath, " --python-expr  \"import bpy; bpy.context.preferences.view.show_splash = False; bpy.ops.import_scene.fbx(filepath = r'" + path + "'); \"")
-            {
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true,
-                UseShellExecute = false
-            };
-            Process.Start(process);
+            OpenFBXInBlender(AssetDatabase.GUIDToAssetPath(guid));
         }
+    }
+
+    public static void OpenFBXInBlender(string path)
+    {
+        // r'pathstring' - the parameter r means literal string
+        ProcessStartInfo process = new ProcessStartInfo(BlenderPath, " --python-expr  \"import bpy; bpy.context.preferences.view.show_splash = False; bpy.ops.import_scene.fbx(filepath = r'" + path + "'); \"")
+        {
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true,
+            UseShellExecute = false
+        };
+        Process.Start(process);
     }
 
     private static string CygwinPath = "C:/cygwin64/bin/mintty.exe";
     [MenuItem("Assets/File/Open Cygwin here")]
     public static void OpenCygwinHere()
     {
-        if (Selection.assetGUIDs.Length > 0)
+        foreach (string guid in Selection.assetGUIDs)
         {
-            string guid = Selection.assetGUIDs[0];
             string path = AssetDatabase.GUIDToAssetPath(guid);
             if (!AssetDatabase.IsValidFolder(path))
             {
                 path = path.Substring(0, path.LastIndexOf('/') + 1);
             }
-            path = Application.dataPath.Substring(0, Application.dataPath.Length - "Assets".Length) + path;
-            Debug.Log($"Opening Cygwin in: {path}");
+            path = "\"" + Application.dataPath.Substring(0, Application.dataPath.Length - "Assets".Length) + path + "\"";
+            UnityEngine.Debug.Log($"Opening Cygwin in: {path}");
             ProcessStartInfo process = new ProcessStartInfo(CygwinPath, "/bin/sh -lc 'cd " + path + "; exec bash'")
             {
                 RedirectStandardOutput = true,
@@ -158,12 +178,12 @@ public class FileUtilities : Editor
         if (Event.current.modifiers == EventModifiers.None) return false;
         if (Event.current.modifiers == EventModifiers.Alt)
         {
-            OpenAsTextfile();
+            OpenAsTextfile(AssetDatabase.GetAssetPath(EditorUtility.InstanceIDToObject(instanceID)));
             return true;
         }
         else if (Event.current.modifiers == EventModifiers.Shift)
         {
-            OpenMetafile();
+            OpenMetafile(AssetDatabase.GetAssetPath(EditorUtility.InstanceIDToObject(instanceID)));
             return true;
         }
         else if (Event.current.modifiers == (EventModifiers.Alt | EventModifiers.Command)) // Command == Windows key
@@ -196,7 +216,7 @@ public class FileUtilities : Editor
         string assetPath = AssetDatabase.GetAssetPath(asset);
         if (assetPath.EndsWith(".fbx", System.StringComparison.OrdinalIgnoreCase))
         {
-            OpenFBXInBlender();
+            OpenFBXInBlender(assetPath);
             return true;
         }
         else return false;
@@ -209,7 +229,7 @@ public class FileUtilities : Editor
         string assetPath = AssetDatabase.GetAssetPath(asset);
         if (Regex.IsMatch(assetPath, @".*\.png$|.*\.jpg$|.*\.jpeg$", RegexOptions.IgnoreCase))
         {
-            OpenInGimp();
+            OpenInGimp(assetPath);
             return true;
         }
         else return false;
@@ -223,12 +243,13 @@ public class FileUtilities : Editor
         // Last expression of the regex is for files without '.' in the name == no file extension
         if (Regex.IsMatch(assetPath, @".*\.txt$|.*\.json$|.*\.md$|.*\.java$|.*\.mm$|^([^.]+)$", RegexOptions.IgnoreCase))
         {
-            OpenAsTextfile();
+            OpenAsTextfile(assetPath);
             return true;
         }
         else return false;
     }
 
+    // This should fold out/in folders on double click
     // Does not work in two columns layout, maybe could be invoked from EditorApplication.update
     public static bool OnOpenFolder2(int instanceID, int line)
     {

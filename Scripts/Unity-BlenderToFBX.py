@@ -35,11 +35,11 @@ if blender280:
         check_existing=False,
         use_selection=False,
         use_active_collection=False,
-		# Custom code (maybe will not work with animated objects)
-		bake_space_transform=True,
-		axis_forward = 'Z',
-		axis_up = 'Y',
-		# End of custom code
+        # Custom code (maybe will not work with animated objects)
+        bake_space_transform=True,
+        axis_forward = 'Z',
+        axis_up = 'Y',
+        # End of custom code
         object_types= {'ARMATURE','CAMERA','LIGHT','MESH','EMPTY'},
         use_mesh_modifiers=True,
         mesh_smooth_type='OFF',
