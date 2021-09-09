@@ -4,7 +4,8 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 
 /// <summary>
-/// This class handles basic link color behavior, supports also underline
+/// This class handles basic link color behavior for TextMeshProUGUI, supports also underline.
+/// Implementation for TextMeshPro non-UGUI will be probably identical or near-identical.
 /// Does not support strike-through, but can be easily implemented in the same way as the underline
 /// </summary>
 [DisallowMultipleComponent()]
@@ -138,7 +139,7 @@ public class TMProUGUIHyperlinks : MonoBehaviour, IPointerDownHandler, IPointerU
             if (charInfo.isVisible && charInfo.underlineVertexIndex > 0 && charInfo.underlineVertexIndex != underlineIndex && charInfo.underlineVertexIndex < vertexColors.Length)
             {
                 underlineIndex = charInfo.underlineVertexIndex;
-                for (int j = 0; j < 12; j++) // Underline seems to be always 3 quads = 12 vertices
+                for (int j = 0; j < 12; j++) // Underline seems to be always 3 quads == 12 vertices
                 {
                     vertexColors[underlineIndex + j] = color;
                 }
