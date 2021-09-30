@@ -7,6 +7,7 @@ using UnityEditor.Callbacks;
 using UnityEditorInternal;
 using UnityEngine;
 
+// Menu item shortcuts: % == ctrl, # == shift, & == alt, _ == no modifier, LEFT, RIGHT, UP, DOWN, F1..F12, HOME, END, PGUP, PGDN
 public class FileUtilities : Editor
 {
 
@@ -74,15 +75,15 @@ public class FileUtilities : Editor
 
     private static string GExtensionsPath = "C:/Program Files (x86)/GitExtensions/GitExtensions.exe";
 
-    [MenuItem("Assets/File/File History GE")]
+    [MenuItem("Assets/File/File History GE  %&h")]
     public static void FileHistoryGitExtensions()
     {
         foreach (string guid in Selection.assetGUIDs)
         {
             string path = AssetDatabase.GUIDToAssetPath(guid);
-            path = path.Substring(6, path.Length - 6); //Remove "Assets" because Application.dataPath also contains it.
-            path = Application.dataPath + path;
-            UnityEngine.Debug.Log("File History: " + path);
+            // Remove "Assets" at the end of Application.dataPath, because asset contains Assets or Packages at the beginning
+            path = Application.dataPath.Substring(0, Application.dataPath.Length - 6) + path;
+            UnityEngine.Debug.Log(path);
             ProcessStartInfo process = new ProcessStartInfo(GExtensionsPath, " filehistory \"" + path + "\"")
             {
                 RedirectStandardOutput = true,
