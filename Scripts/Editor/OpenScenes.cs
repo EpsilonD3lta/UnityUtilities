@@ -39,7 +39,7 @@ public class OpenScenes : EditorWindow
             if (e.keyCode == KeyCode.Escape && !docked) Close();
         }
 
-        var scenePaths = AssetDatabase.FindAssets("t:scene").Select(x => AssetDatabase.GUIDToAssetPath(x)).ToList();
+        var scenePaths = AssetDatabase.FindAssets("t:scene", new string[] { "Assets" }).Select(x => AssetDatabase.GUIDToAssetPath(x)).ToList();
 
         GUILayout.Space(5);
         scrollPosition = GUILayout.BeginScrollView(scrollPosition);
