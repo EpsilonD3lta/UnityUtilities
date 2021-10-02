@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -204,7 +204,16 @@ public class FileUtilities : Editor
         string assetPath = AssetDatabase.GetAssetPath(asset);
         if (AssetDatabase.IsValidFolder(assetPath))
         {
-            EditorUtility.RevealInFinder(assetPath);
+            assetPath = "\"" + Application.dataPath.Substring(0, Application.dataPath.Length - "Assets".Length) + assetPath + "\"";
+            assetPath = assetPath.Replace('/', '\\');
+            ProcessStartInfo process = new ProcessStartInfo("explorer.exe", assetPath)
+            {
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+                UseShellExecute = false
+            };
+            Process.Start(process);
             return true;
         }
         else return false;
