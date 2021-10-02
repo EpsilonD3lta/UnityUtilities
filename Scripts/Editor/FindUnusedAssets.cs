@@ -1,5 +1,6 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -28,6 +29,7 @@ public class FindUnusedAssets : EditorWindow
 
     static bool canceled = false;
     static float progress = 0;
+    static string subfolder = "";
 
     [MenuItem("Tools/Find Unused Assets")]
     public static void OpenUsageWindow()
@@ -61,8 +63,11 @@ public class FindUnusedAssets : EditorWindow
             var metaOriginal = file.Substring(0, file.Length - 5);
             metaOriginal = metaOriginal.Replace(Application.dataPath, "Assets");
             metaOriginal = metaOriginal.Replace("\\", "/");
-            if (metaOriginal == path)       // Is this a self-reference?
-                continue;                   // Skip this file, move to the next one
+            if (metaOriginal == path) continue; // Skip own .meta file
+
+            var originalFilename = file.Replace(Application.dataPath, "Assets");
+            originalFilename = originalFilename.Replace("\\", "/");
+            if (originalFilename == path) continue; // Skip the file itself
 
             if (EditorUtility.DisplayCancelableProgressBar("Searching...", "Looking for asset references", progress))
             {
@@ -74,10 +79,7 @@ public class FindUnusedAssets : EditorWindow
             {
                 if (line.Contains(guid))
                 {
-                    var originalFilename = file.Replace(Application.dataPath, "Assets");
-                    originalFilename = originalFilename.Replace("\\", "/");
-                    if (originalFilename != path)       // Is this a self-reference?
-                        return true;                    // Nope, we got a legit reference
+                    return true;
                 }
             }
         }
@@ -98,32 +100,31 @@ public class FindUnusedAssets : EditorWindow
             return;
         }
 
-        var assetPaths = AssetDatabase.GetAllAssetPaths();
+        var assetPaths = AssetDatabase.GetAllAssetPaths().Where(x => x.StartsWith("Assets/" + subfolder)).ToArray();
 
         window.unusedAssets = new List<string>(); // Empty old results
 
         int total = assetPaths.Length;
         int current = 0;
-        foreach (var asset in assetPaths)
+        foreach (var assetPath in assetPaths)
         {
             current++;
             progress = current / (float)total;
 
-            if (asset.StartsWith("ProjectSettings/") || asset.StartsWith("Library/") || asset.StartsWith("Packages/"))
-                continue;
+            if (AssetDatabase.IsValidFolder(assetPath)) continue;
+            if (assetPath.Contains("/Resources/") || assetPath.Contains("/Editor/") || assetPath.Contains("/Plugins/")) continue;
 
-            if (canceled ||
-                EditorUtility.DisplayCancelableProgressBar("Searching...", "Looking for asset references", progress))
+            if (canceled || EditorUtility.DisplayCancelableProgressBar("Searching...", "Looking for asset references", progress))
             {
                 EditorUtility.ClearProgressBar();
                 return;
             }
 
-            var guid = AssetDatabase.AssetPathToGUID(asset);
+            var guid = AssetDatabase.AssetPathToGUID(assetPath);
             if (!FindAnyAssetUsage(guid))
             {
-                window.unusedAssets.Add(asset);
-                File.AppendAllText("Usages.txt", asset + " Type[" + AssetDatabase.GetMainAssetTypeAtPath(asset) + "]\n");
+                window.unusedAssets.Add(assetPath);
+                File.AppendAllText("Usages.txt", assetPath + " Type[" + AssetDatabase.GetMainAssetTypeAtPath(assetPath) + "]\n");
             }
         }
 
@@ -134,6 +135,8 @@ public class FindUnusedAssets : EditorWindow
 
     private void OnGUI()
     {
+        GUILayout.Label("Subfolder:");
+        subfolder = GUILayout.TextField(subfolder);
         if (GUILayout.Button("Find Unused Assets"))
         {
             FindAssets();
