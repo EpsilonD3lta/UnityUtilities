@@ -1,35 +1,41 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEngine;
 
 public class FindUnusedAssets : EditorWindow
 {
-    private static readonly string[] extensions =
-    {
-       "*.prefab",
-       "*.meta",
-       "*.spriteatlas",
-       "*.asset",
-       "*.unity",
-       "*.mat",
-       "*.controller",
-       "*.overrideController",
-       "*.flare",
-       "*.mask",
-       "*.preset",
-       "*.shadergraph",
-       "*.shadersubgraph",
-       "*.terrainlayer",
-       "*.brush"
+    private static readonly string[] excludedExtensions =
+{
+       "preset",
+       "spriteatlas",
+       "unity",
+       "dll",
+       "m",
+       "java",
+       "aar",
+       "asmdef",
     };
 
-    public List<string> unusedAssets = new List<string>();
+    private static readonly string[] excludedSearchInExtensions =
+    {
+        "dll",
+        "m",
+        "java",
+        "aar",
+        "cs"
+    };
 
-    static bool canceled = false;
-    static float progress = 0;
-    static string subfolder = "";
+    private static bool canceled = false;
+    private static float progress = 0;
+    private static string subfolder = "";
+
+    private static string projectPath;
+    private static List<string> otherFilesPaths = new List<string>();
+
+    public List<string> unusedAssets = new List<string>();
 
     [MenuItem("Tools/Find Unused Assets")]
     public static void OpenUsageWindow()
@@ -46,42 +52,21 @@ public class FindUnusedAssets : EditorWindow
     /// <returns></returns>
     static bool FindAnyAssetUsage(string guid)
     {
-        List<string> references = new List<string>();
-        List<string> allFiles = new List<string>();
-
-        foreach (var ext in extensions)
+        string assetPath = AssetDatabase.GUIDToAssetPath(guid).Replace("/", "\\");
+        string assetFilePath = projectPath + "\\" + assetPath;
+        string assetMetaFilePath = assetFilePath + ".meta";
+        Regex regex = new Regex(guid, RegexOptions.Compiled);
+        foreach (var otherFilePath in otherFilesPaths)
         {
-            var filenames = Directory.EnumerateFiles(Application.dataPath, ext, SearchOption.AllDirectories);
-            allFiles.AddRange(filenames);
-        }
-
-        var path = AssetDatabase.GUIDToAssetPath(guid);
-        foreach (var file in allFiles)
-        {
-            FileInfo assetFile = new FileInfo(file);
-
-            var metaOriginal = file.Substring(0, file.Length - 5);
-            metaOriginal = metaOriginal.Replace(Application.dataPath, "Assets");
-            metaOriginal = metaOriginal.Replace("\\", "/");
-            if (metaOriginal == path) continue; // Skip own .meta file
-
-            var originalFilename = file.Replace(Application.dataPath, "Assets");
-            originalFilename = originalFilename.Replace("\\", "/");
-            if (originalFilename == path) continue; // Skip the file itself
+            if (assetFilePath == otherFilePath || assetMetaFilePath == otherFilePath) continue; // Skip the file itself or own .meta file
 
             if (EditorUtility.DisplayCancelableProgressBar("Searching...", "Looking for asset references", progress))
             {
                 canceled = true;
-                return false;
+                return true;
             }
 
-            foreach (var line in File.ReadAllLines(file))
-            {
-                if (line.Contains(guid))
-                {
-                    return true;
-                }
-            }
+            if (regex.IsMatch(File.ReadAllText(otherFilePath))) return true;
         }
 
         return false;
@@ -100,19 +85,25 @@ public class FindUnusedAssets : EditorWindow
             return;
         }
 
-        var assetPaths = AssetDatabase.GetAllAssetPaths().Where(x => x.StartsWith("Assets/" + subfolder)).ToArray();
+        var assetPaths = AssetDatabase.GetAllAssetPaths().Where(x => x.StartsWith("Assets/" + subfolder) && !AssetDatabase.IsValidFolder(x));
+        assetPaths = assetPaths.Where(x => !x.Contains("/Resources/") &&
+            !x.Contains("/Editor/") && !x.Contains("/Plugins/") && !x.Contains("StreamingAssets"));
+        assetPaths = assetPaths.Where(x => !Regex.IsMatch(x, $"\\.({string.Join("|", excludedExtensions)})$"));
 
         window.unusedAssets = new List<string>(); // Empty old results
 
-        int total = assetPaths.Length;
+        projectPath = Application.dataPath.Substring(0, Application.dataPath.Length - 7).Replace("/", "\\");
+        otherFilesPaths = Directory.EnumerateFiles(projectPath + "\\Assets", "*", SearchOption.AllDirectories).ToList();
+        otherFilesPaths.AddRange(Directory.EnumerateFiles(projectPath + "\\ProjectSettings", "*", SearchOption.AllDirectories).ToList());
+        otherFilesPaths = otherFilesPaths.Where(x => !x.Contains("/Plugins/")).ToList();
+        otherFilesPaths = otherFilesPaths.Where(x => !Regex.IsMatch(x, $"\\.({string.Join("|", excludedSearchInExtensions)})$")).ToList();
+
+        int total = assetPaths.Count();
         int current = 0;
         foreach (var assetPath in assetPaths)
         {
             current++;
             progress = current / (float)total;
-
-            if (AssetDatabase.IsValidFolder(assetPath)) continue;
-            if (assetPath.Contains("/Resources/") || assetPath.Contains("/Editor/") || assetPath.Contains("/Plugins/")) continue;
 
             if (canceled || EditorUtility.DisplayCancelableProgressBar("Searching...", "Looking for asset references", progress))
             {
