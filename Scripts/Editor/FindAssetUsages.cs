@@ -1,32 +1,30 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEngine;
 
-// Created by Michal Ferko:
+// Adapted from script by Michal Ferko:
 // https://github.com/michalferko
 // https://www.linkedin.com/in/michalferko/
 // This script is distributed under MIT License included in Licenses folder as MIT_LICENSE_MichalFerko
 public class FindAssetUsages : EditorWindow
 {
+    // Look for usages only in these assets (and their .meta files)
     private static readonly string[] extensions =
     {
-        "*.prefab",
-        "*.meta",
-        "*.spriteatlas",
-        "*.asset",
-        "*.unity",
-        "*.mat",
-        "*.controller",
-        "*.overrideController",
-        "*.flare",
-        "*.mask",
-        "*.preset",
-        "*.shadergraph",
-        "*.shadersubgraph",
-        "*.terrainlayer",
-        "*.brush"
-
+        "prefab", "asset", "unity", "preset",
+        "fbx", "obj", "blend", "mesh",
+        "mat", "cubemap",
+        "spriteatlas",
+        "controller", "overrideController",
+        "flare",
+        "mask",
+        "shader", "compute", "shadergraph", "shadersubgraph",
+        "terrainlayer",
+        "brush",
+        "cs.meta", "asmdef", "asmref",
     };
 
     public List<string> assets = new List<string>();
@@ -57,34 +55,36 @@ public class FindAssetUsages : EditorWindow
         }
         if (assetGuids.Length > 1)
         {
-            Debug.Log("Finding asset usages for multiple assets not working - only the first asset references will be found");
+            Debug.Log("Finding asset usages no multiple assets support - only the first asset references will be found");
         }
 
         window.assets = new List<string>(); // Empty old results
 
         var references = new List<string>();
-        var allFiles = new List<string>();
 
-        foreach (string ext in extensions)
-        {
-            var filenames = Directory.EnumerateFiles(Application.dataPath, ext, SearchOption.AllDirectories);
-            allFiles.AddRange(filenames);
-        }
+        string projectPath = Application.dataPath.Substring(0, Application.dataPath.Length - 7).Replace("/", "\\");
+        var otherFilesPaths = Directory.EnumerateFiles(projectPath + "\\Assets", "*", SearchOption.AllDirectories).ToList();
+        otherFilesPaths.AddRange(Directory.EnumerateFiles(projectPath + "\\ProjectSettings", "*", SearchOption.AllDirectories).ToList());
+        List<string> extensionsWithMeta = new List<string>(extensions);
+        extensionsWithMeta.AddRange(extensions.Select(x => x + ".meta"));
+        otherFilesPaths = otherFilesPaths.Where(x => Regex.IsMatch(x, $"\\.({string.Join("|", extensionsWithMeta)})$")).ToList();
 
-        int total = allFiles.Count;
-
+        int total = otherFilesPaths.Count;
         int current = 0;
 
         string guid = assetGuids[0];
-        string path = AssetDatabase.GUIDToAssetPath(guid);
-        foreach (string file in allFiles)
+        string assetPath = AssetDatabase.GUIDToAssetPath(guid).Replace("/", "\\");
+        string assetFilePath = projectPath + "\\" + assetPath;
+        string assetMetaFilePath = assetFilePath + ".meta";
+        Regex regex = new Regex(guid, RegexOptions.Compiled);
+
+        foreach (string otherFilePath in otherFilesPaths)
         {
-            if (!File.Exists(file))
+            if (!File.Exists(otherFilePath))
             {
-                Debug.LogWarning($"File does not exist, path too long? Path: {file}");
+                Debug.LogWarning($"File does not exist, path too long? Path: {otherFilePath}");
                 continue;
             }
-            var assetFile = new FileInfo(file);
             if (EditorUtility.DisplayCancelableProgressBar("Searching...", "Searching for asset references", current / (float)total))
             {
                 window.canceled = true;
@@ -93,24 +93,12 @@ public class FindAssetUsages : EditorWindow
             }
 
             current++;
-            string metaOriginal = file.Substring(0, file.Length - 5);
-            metaOriginal = metaOriginal.Replace(Application.dataPath, "Assets");
-            metaOriginal = metaOriginal.Replace("\\", "/");
-            if (metaOriginal == path)       // Is this a self-reference?
-                continue;                   // Skip this file, move to the next one
 
-            foreach (string line in File.ReadAllLines(file))
+            if (regex.IsMatch(File.ReadAllText(otherFilePath)))
             {
-                if (line.Contains(guid))
-                {
-                    string originalFilename = file.Replace(Application.dataPath, "Assets");
-                    originalFilename = originalFilename.Replace("\\", "/");
-                    if (originalFilename != path)       // Is this a self-reference?
-                    {
-                        references.Add(originalFilename);   // Not referencing self, add ref
-                        break;
-                    }
-                }
+                if (assetFilePath == otherFilePath || assetMetaFilePath == otherFilePath) continue;
+                string otherFileAssetPath = otherFilePath.Replace(projectPath + "\\", "").Replace("\\", "/");
+                references.Add(otherFileAssetPath);   // Not referencing self, add ref
             }
         }
 
