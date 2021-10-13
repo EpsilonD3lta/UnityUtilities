@@ -1,11 +1,14 @@
 using UnityEngine;
+#if UNITY_EDITOR
 using UnityEditor.Animations;
 using UnityEngine.Animations;
 using UnityEditor;
+#endif
 
 [ExecuteAlways]
 public class AnimationRecorder : MonoBehaviour
 {
+#if UNITY_EDITOR
     public AnimationClip clip;
     public bool recordInEditorTime;
 
@@ -48,4 +51,5 @@ public class AnimationRecorder : MonoBehaviour
             recorder.SaveToClip(clip);
         }
     }
+#endif
 }
