@@ -24,8 +24,7 @@ public class FileUtilities : Editor
         {
             string guid = Selection.assetGUIDs[0];
             GUIUtility.systemCopyBuffer = guid;
-            string assetName = Path.GetFileName(AssetDatabase.GUIDToAssetPath(guid));
-            UnityEngine.Debug.Log($"{assetName} GUID copied to clipboard: {guid}");
+            UnityEngine.Debug.Log($"{AssetDatabase.GUIDToAssetPath(guid)} GUID copied to clipboard: {guid}");
         }
     }
 
@@ -125,7 +124,7 @@ public class FileUtilities : Editor
     }
 
     // Inspired by https://blog.kikicode.com/2018/12/double-click-fbx-files-to-import-to.html
-    private static string BlenderPath = "C:/Program Files/Blender Foundation/Blender 2.91/blender.exe";
+    private static string BlenderPath = "C:/Program Files/Blender Foundation/Blender 2.93/blender.exe";
 
     [MenuItem("Assets/File/Open FBX in Blender")]
     public static void OpenFBXInBlender()
