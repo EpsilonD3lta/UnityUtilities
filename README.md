@@ -6,3 +6,6 @@ Mind the licenses stated at the beginning of each script or method (those are no
 and are distributed under MIT license.
 
 Note that there might be bugs, use at your own risk.
+
+# Documentation
+## [APKInstaller](Documentation/APKInstaller.pdf)
