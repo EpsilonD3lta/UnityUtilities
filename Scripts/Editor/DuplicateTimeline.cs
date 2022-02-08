@@ -18,7 +18,6 @@ public class DuplicateTimeline : MonoBehaviour
     {
         if (UnityEditor.Selection.activeObject as GameObject == null)
         {
-            Debug.Log("Null active object");
             return false;
         }
 
@@ -27,21 +26,18 @@ public class DuplicateTimeline : MonoBehaviour
         PlayableDirector playableDirector = playableDirectorObj.GetComponent<PlayableDirector>();
         if (playableDirector == null)
         {
-            Debug.Log("Null playableDirector");
             return false;
         }
 
         TimelineAsset timelineAsset = playableDirector.playableAsset as TimelineAsset;
         if (timelineAsset == null)
         {
-            Debug.Log("Null timelineAsset");
             return false;
         }
 
         string path = AssetDatabase.GetAssetPath(timelineAsset);
         if (string.IsNullOrEmpty(path))
         {
-            Debug.Log("Null timeline asset path");
             return false;
         }
 
