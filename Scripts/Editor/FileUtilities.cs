@@ -17,6 +17,12 @@ public class FileUtilities : Editor
         UnityEditor.Compilation.CompilationPipeline.RequestScriptCompilation();
     }
 
+    [MenuItem("Assets/Recompile Scripts Clean")]
+    public static void RecompileScriptsClean()
+    {
+        UnityEditor.Compilation.CompilationPipeline.RequestScriptCompilation(UnityEditor.Compilation.RequestScriptCompilationOptions.CleanBuildCache);
+    }
+
     [MenuItem("Assets/File/Copy GUID %#c")]
     public static void CopyGuid()
     {
