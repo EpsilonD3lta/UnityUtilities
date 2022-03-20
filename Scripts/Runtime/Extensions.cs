@@ -86,6 +86,19 @@ public static class Extensions
     }
     #endregion
 
+    #region Colors
+    public static Color SetAlpha(this Color c, float a)
+    {
+        return new Color(c.r, c.g, c.b, a);
+    }
+
+    public static Color SetRgb(this Color c, float r, float g, float b)
+    {
+        return new Color(r, g, b, c.a);
+    }
+
+    #endregion
+
     #region LineRenderer
     public static void AddPosition(this LineRenderer l, Vector3 newPosition)
     {
