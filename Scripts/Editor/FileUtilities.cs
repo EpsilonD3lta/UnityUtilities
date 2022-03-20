@@ -129,8 +129,8 @@ public class FileUtilities : Editor
         Process.Start(process);
     }
 
-    // Inspired by https://blog.kikicode.com/2018/12/double-click-fbx-files-to-import-to.html
-    private static string BlenderPath = "C:/Program Files/Blender Foundation/Blender 2.93/blender.exe";
+    private static string BlenderFolderPath = "C:/Program Files/Blender Foundation/";
+    private static string BlenderPath = "";
 
     [MenuItem("Assets/File/Open FBX in Blender")]
     public static void OpenFBXInBlender()
@@ -141,8 +141,15 @@ public class FileUtilities : Editor
         }
     }
 
+    // Inspired by https://blog.kikicode.com/2018/12/double-click-fbx-files-to-import-to.html
     public static void OpenFBXInBlender(string path)
     {
+        if (string.IsNullOrEmpty(BlenderPath))
+        {
+            BlenderPath = Directory.GetDirectories(BlenderFolderPath).LastOrDefault() + "/blender.exe";
+            if (string.IsNullOrEmpty(BlenderPath)) return;
+        }
+
         // r'pathstring' - the parameter r means literal string
         ProcessStartInfo process = new ProcessStartInfo(BlenderPath, " --python-expr  \"import bpy; bpy.context.preferences.view.show_splash = False; bpy.ops.import_scene.fbx(filepath = r'" + path + "'); \"")
         {

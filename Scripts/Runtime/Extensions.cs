@@ -113,6 +113,11 @@ public static class Extensions
     }
     #endregion
 
+    public static string Serialize<T>(this T obj)
+    {
+        return JsonUtility.ToJson(obj);
+    }
+
     public static bool Contains(this LayerMask layerMask, int layer)
     {
         return layerMask == (layerMask | (1 << layer));
@@ -303,7 +308,6 @@ public static class Extensions
     }
     #endregion
 }
-
 
 public class Debug : UnityEngine.Debug
 {
