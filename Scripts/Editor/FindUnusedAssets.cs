@@ -158,6 +158,7 @@ public class FindUnusedAssets : EditorWindow
         foreach (var assetFilename in unusedAssets)
         {
             var asset = AssetDatabase.LoadAssetAtPath<Object>(assetFilename);
+            if (asset == null) continue;
             EditorGUILayout.LabelField(assetFilename);
             EditorGUILayout.ObjectField(asset, asset.GetType(), true);
             EditorGUILayout.Space();
