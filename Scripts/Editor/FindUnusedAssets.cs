@@ -133,7 +133,6 @@ public class FindUnusedAssets : EditorWindow
             if (!FindAnyAssetUsage(guid))
             {
                 window.unusedAssets.Add(assetPath);
-                File.AppendAllText("Usages.txt", assetPath + " Type[" + AssetDatabase.GetMainAssetTypeAtPath(assetPath) + "]\n");
             }
         }
 
