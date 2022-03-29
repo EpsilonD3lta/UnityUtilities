@@ -89,15 +89,33 @@ public class FileUtilities : Editor
             // Remove "Assets" at the end of Application.dataPath, because asset contains Assets or Packages at the beginning
             path = Application.dataPath.Substring(0, Application.dataPath.Length - 6) + path;
             UnityEngine.Debug.Log(path);
-            ProcessStartInfo process = new ProcessStartInfo(GExtensionsPath, " filehistory \"" + path + "\"")
-            {
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true,
-                UseShellExecute = false
-            };
-            Process.Start(process);
+            FileHistoryGitExtensions(path);
         }
+    }
+
+    [MenuItem("Assets/File/Meta File History GE  #&h")]
+    public static void MetaFileHistoryGitExtensions()
+    {
+        foreach (string guid in Selection.assetGUIDs)
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            // Remove "Assets" at the end of Application.dataPath, because asset contains Assets or Packages at the beginning
+            path = Application.dataPath.Substring(0, Application.dataPath.Length - 6) + path + ".meta";
+            UnityEngine.Debug.Log(path);
+            FileHistoryGitExtensions(path);
+        }
+    }
+
+    public static void FileHistoryGitExtensions(string path)
+    {
+        ProcessStartInfo process = new ProcessStartInfo(GExtensionsPath, " filehistory \"" + path + "\"")
+        {
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true,
+            UseShellExecute = false
+        };
+        Process.Start(process);
     }
 
     private static string GIMPBinFolderPath = "C:/Program Files/GIMP 2/bin/";
