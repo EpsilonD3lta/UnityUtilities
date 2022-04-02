@@ -106,6 +106,23 @@ public class FindUnusedAssets : EditorWindow
             !x.Contains("/Editor/") && !x.Contains("/Plugins/") && !x.Contains("StreamingAssets"));
         assetPaths = assetPaths.Where(x => !Regex.IsMatch(x, $"\\.({string.Join("|", excludedExtensions)})$"));
 
+        // Do not check scripts that do not contain class derived from UnityEngine.Object
+        {
+            var assetPathsList = assetPaths.ToList();
+            var scripts = assetPathsList.Where(x => x.EndsWith(".cs")).ToList();
+            var nonMonos = new List<string>();
+            foreach (var s in scripts)
+            {
+                var loadedScript = AssetDatabase.LoadAssetAtPath<MonoScript>(s);
+                if (loadedScript != null &&
+                    (loadedScript.GetClass() == null || !loadedScript.GetClass().IsSubclassOf(typeof(Object))))
+                {
+                    assetPathsList.Remove(s);
+                }
+            }
+            assetPaths = assetPathsList;
+        }
+
         window.unusedAssets = new List<string>(); // Empty old results
 
         List<string> extensionsToSearchInWithMeta = new List<string>(extensionsToSearchIn);
