@@ -15,6 +15,7 @@ public class AppDataUtility : EditorWindow
 
     private void OnGUI()
     {
+        Event ev = Event.current;
         GUILayout.Label("AppData Path (Application.persistentDataPath)", EditorStyles.boldLabel);
         GUILayout.TextField(Application.persistentDataPath);
         GUILayout.BeginHorizontal();
@@ -24,7 +25,8 @@ public class AppDataUtility : EditorWindow
         }
         if (GUILayout.Button("Delete Contents"))
         {
-            if (EditorUtility.DisplayDialog("AppData Utility", "Delete all files in the persistent data folder? This cannot be undone.", "Yes", "Cancel"))
+            if (ev.modifiers == EventModifiers.Shift ||
+                EditorUtility.DisplayDialog("AppData Utility", "Delete all files in the persistent data folder? This cannot be undone.", "Yes", "Cancel"))
             {
                 var directoryInfo = new DirectoryInfo(Application.persistentDataPath);
 
@@ -40,7 +42,8 @@ public class AppDataUtility : EditorWindow
         GUILayout.Label("PlayerPrefs", EditorStyles.boldLabel);
         if (GUILayout.Button("Delete all PlayerPrefs"))
         {
-            if (EditorUtility.DisplayDialog("AppData Utility", "Delete all PlayerPrefs? This cannot be undone.", "Yes", "Cancel"))
+            if (ev.modifiers == EventModifiers.Shift ||
+                EditorUtility.DisplayDialog("AppData Utility", "Delete all PlayerPrefs? This cannot be undone.", "Yes", "Cancel"))
             {
                 PlayerPrefs.DeleteAll();
                 Debug.LogWarning("AppData Utility: All PlayerPrefs were deleted.");
