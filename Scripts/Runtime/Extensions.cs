@@ -82,7 +82,7 @@ public static class Extensions
         lineDir.Normalize();
         var v = point - linePoint;
         var d = Vector3.Dot(v, lineDir);
-        return (v + lineDir * d).magnitude;
+        return (v - lineDir * d).magnitude;
     }
     #endregion
 
