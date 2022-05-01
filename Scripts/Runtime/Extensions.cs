@@ -69,6 +69,19 @@ public static class Extensions
         return (x % m + m) % m;
     }
 
+    public static Vector3 Abs(Vector3 v)
+    {
+        return new Vector3(Mathf.Abs(v.x), Mathf.Abs(v.y), Mathf.Abs(v.z));
+    }
+
+    public static Vector3 Unscale(Vector3 v, Vector3 factor)
+    {
+        return new Vector3(
+            factor.x != 0 ? v.x / factor.x : 0,
+            factor.y != 0 ? v.y / factor.y : 0,
+            factor.z != 0 ? v.z / factor.z : 0);
+    }
+
     public static Vector3 NearestPointOnLine(Vector3 linePoint, Vector3 lineDir, Vector3 point)
     {
         lineDir.Normalize();
@@ -82,7 +95,29 @@ public static class Extensions
         lineDir.Normalize();
         var v = point - linePoint;
         var d = Vector3.Dot(v, lineDir);
-        return (v + lineDir * d).magnitude;
+        return (v - lineDir * d).magnitude;
+    }
+
+    public static bool LineLineIntersection(out Vector3 intersection, Vector3 linePoint1, Vector3 lineVec1, Vector3 linePoint2, Vector3 lineVec2)
+    {
+        Vector3 lineVec3 = linePoint2 - linePoint1;
+        Vector3 crossVec1and2 = Vector3.Cross(lineVec1, lineVec2);
+        Vector3 crossVec3and2 = Vector3.Cross(lineVec3, lineVec2);
+
+        float planarFactor = Vector3.Dot(lineVec3, crossVec1and2);
+
+        // Is coplanar and not parallel
+        if (Mathf.Abs(planarFactor) < 0.0001f && crossVec1and2.sqrMagnitude > 0.0001f)
+        {
+            float s = Vector3.Dot(crossVec3and2, crossVec1and2) / crossVec1and2.sqrMagnitude;
+            intersection = linePoint1 + (lineVec1 * s);
+            return true;
+        }
+        else
+        {
+            intersection = Vector3.zero;
+            return false;
+        }
     }
     #endregion
 
