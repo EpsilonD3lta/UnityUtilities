@@ -1,12 +1,10 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
-using UnityEditor.Presets;
 
 public class ComponentUtilities
 {
     private static SerializedObject savedObject;
+    private static Object savedTargetObject;
 
     [InitializeOnLoadMethod]
     static void Initialize()
@@ -16,57 +14,72 @@ public class ComponentUtilities
 
     public static void CopyOnContextClickWithModifiers(GenericMenu menu, SerializedProperty property)
     {
-        if (Event.current.modifiers == EventModifiers.Control)
+        // Ctrl == copy, shift == paste, alt == copy, ctrl + alt == cut, ctrl + shift == adaptive paste
+        var modifiers = Event.current.modifiers;
+        if (modifiers == EventModifiers.Control || modifiers == (EventModifiers.Control | EventModifiers.Alt))
         {
             savedObject = new SerializedObject(property.serializedObject.targetObject);
+            // savedObject.targetObject is null if we delete component in the meantime. Hence we create a copy
+            savedTargetObject = Object.Instantiate(property.serializedObject.targetObject);
+            ((Component)savedTargetObject).gameObject.hideFlags = HideFlags.HideAndDontSave;
+
             Debug.Log("Component copied");
         }
         // Paste properties with same names
-        if (Event.current.modifiers == (EventModifiers.Shift | EventModifiers.Control))
+        if (modifiers == (EventModifiers.Shift | EventModifiers.Control))
         {
             if (savedObject == null)
             {
                 Debug.Log("Saved component is null");
                 return;
             }
-            PartialPaste(property);
+            AdaptivePaste(property);
         }
-        else if (Event.current.modifiers == EventModifiers.Shift)
+        else if (modifiers == EventModifiers.Shift)
         {
-            if (savedObject == null || savedObject.targetObject == null)
+            if (savedObject == null)
             {
-                Debug.Log("Saved component targetObject is null");
+                Debug.Log("Saved component is null");
+                return;
+            }
+            if (savedTargetObject == null)
+            {
+                Debug.Log("Saved component target object is null");
                 return;
             }
 
             // Paste values if type is the same
-            if (savedObject.targetObject.GetType() == property.serializedObject.targetObject.GetType())
+            if (savedTargetObject.GetType() == property.serializedObject.targetObject.GetType())
             {
                 Undo.RecordObject(property.serializedObject.targetObject, "Paste component values");
-                EditorUtility.CopySerialized(savedObject.targetObject, property.serializedObject.targetObject);
+                EditorUtility.CopySerialized(savedTargetObject, property.serializedObject.targetObject);
                 Debug.Log("Component values pasted");
             }
             // Create new component
             else
             {
                 GameObject g = ((Component)property.serializedObject.targetObject).gameObject;
-                Component c = Undo.AddComponent(g, savedObject.targetObject.GetType());
-                EditorUtility.CopySerialized(savedObject.targetObject, c);
+                Component c = Undo.AddComponent(g, savedTargetObject.GetType());
+                EditorUtility.CopySerialized(savedTargetObject, c);
                 Debug.Log("Component pasted as new");
             }
 
         }
         // Delete Component
-        if (Event.current.modifiers == EventModifiers.Alt)
+        if ((modifiers & EventModifiers.Alt) == EventModifiers.Alt)
         {
             Undo.RegisterFullObjectHierarchyUndo(property.serializedObject.targetObject, "Delete component");
             EditorApplication.delayCall += () => { Object.DestroyImmediate(property.serializedObject.targetObject); };
         }
     }
 
-    private static void PartialPaste(SerializedProperty property)
+    /// <summary>
+    /// Tries to find properties with the same name and type and copypastes values
+    /// </summary>
+    /// <param name="property"></param>
+    private static void AdaptivePaste(SerializedProperty property)
     {
-        Undo.RecordObject(property.serializedObject.targetObject, "Paste component values partially");
+        Undo.RecordObject(property.serializedObject.targetObject, "Paste component values adaptively");
         SerializedObject destination = new SerializedObject(property.serializedObject.targetObject);
         SerializedProperty savedObjectProperties = savedObject.GetIterator();
 
@@ -87,6 +100,6 @@ public class ComponentUtilities
             }
         }
         destination.ApplyModifiedProperties();
-        Debug.Log("Component values partially pasted");
+        Debug.Log("Component values adaptively pasted");
     }
 }
