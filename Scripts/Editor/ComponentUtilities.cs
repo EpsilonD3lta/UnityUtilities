@@ -69,7 +69,20 @@ public class ComponentUtilities
         if ((modifiers & EventModifiers.Alt) == EventModifiers.Alt)
         {
             Undo.RegisterFullObjectHierarchyUndo(property.serializedObject.targetObject, "Delete component");
+            int undoID = Undo.GetCurrentGroup();
+            System.Type type = property.serializedObject.targetObject.GetType();
             EditorApplication.delayCall += () => { Object.DestroyImmediate(property.serializedObject.targetObject); };
+            foreach (var go in Selection.gameObjects)
+            {
+                if (go == property.serializedObject.targetObject) continue;
+                var component = go.GetComponent(type);
+                if (component)
+                {
+                    Undo.RegisterFullObjectHierarchyUndo(go, "Delete component");
+                    Undo.CollapseUndoOperations(undoID);
+                    EditorApplication.delayCall += () => { Object.DestroyImmediate(component); };
+                }
+            }
         }
     }
 
