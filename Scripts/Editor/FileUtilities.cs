@@ -179,6 +179,29 @@ public class FileUtilities : Editor
         Process.Start(process);
     }
 
+    private static string AudacityPath = "C:/Program Files/Audacity/Audacity.exe";
+
+    [MenuItem("Assets/File/Open AudioFile in Audacity")]
+    public static void OpenInAudacity()
+    {
+        foreach (string guid in Selection.assetGUIDs)
+        {
+            OpenInAudacity(AssetDatabase.GUIDToAssetPath(guid));
+        }
+    }
+
+    public static void OpenInAudacity(string path)
+    {
+        ProcessStartInfo process = new ProcessStartInfo(AudacityPath, "\"" + path + "\"")
+        {
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true,
+            UseShellExecute = false
+        };
+        Process.Start(process);
+    }
+
     private static string CygwinPath = "C:/cygwin64/bin/mintty.exe";
     [MenuItem("Assets/File/Open Cygwin here")]
     public static void OpenCygwinHere()
@@ -276,6 +299,19 @@ public class FileUtilities : Editor
     }
 
     [OnOpenAsset(4)]
+    public static bool OnOpenAudio(int instanceID, int line)
+    {
+        Object asset = EditorUtility.InstanceIDToObject(instanceID);
+        string assetPath = AssetDatabase.GetAssetPath(asset);
+        if (Regex.IsMatch(assetPath, @".*\.wav$|.*\.flac$|.*\.ogg$|.*\.mp3$|.*\.mp4$|.*\.aiff$", RegexOptions.IgnoreCase))
+        {
+            OpenInAudacity(assetPath);
+            return true;
+        }
+        else return false;
+    }
+
+    [OnOpenAsset(5)]
     public static bool OnOpenText(int instanceID, int line)
     {
         Object asset = EditorUtility.InstanceIDToObject(instanceID);
