@@ -44,9 +44,19 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
         window.Show();
     }
 
+    [MenuItem("Window/Hierarchy History")]
+    private static void CreateHierarchyHistory()
+    {
+        AssetsHistory window = CreateInstance<AssetsHistory>();
+        window.titleContent = EditorGUIUtility.TrTextContent("Hierarchy History");
+        window.Show();
+    }
+
     public virtual void AddItemsToMenu(GenericMenu menu)
     {
         menu.AddItem(EditorGUIUtility.TrTextContent("Test"), false, Test);
+        menu.AddItem(EditorGUIUtility.TrTextContent("Clear History"), false, ClearHistory);
+        menu.AddItem(EditorGUIUtility.TrTextContent("Clear Pinned"), false, ClearPinned);
     }
 
     private void Awake()
@@ -74,9 +84,8 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
 
     private void Test()
     {
-        AssetsHistory window = CreateInstance<AssetsHistory>();
-        window.titleContent = EditorGUIUtility.TrTextContent("AssetsHistory");
-        window.Show();
+        Debug.Log(this.GetHashCode());
+
     }
 
     // This is received only when visible
@@ -111,6 +120,7 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
             if (asset == null)
             {
                 history.Remove(asset);
+                pinned.Remove(asset);
                 shouldLimitAndOrderHistory = true;
                 continue;
             }
@@ -360,6 +370,8 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
 
     private void LimitAndOrderHistory()
     {
+        history.RemoveAll(x => x == null);
+        pinned.RemoveAll(x => x == null);
         int onlyPinned = pinned.Where(x => !history.Contains(x)).Count();
         int historyLimit = limit - onlyPinned;
         if (history.Count > historyLimit) history = history.Take(historyLimit).ToList();
@@ -437,6 +449,17 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
             MethodInfo builderMethod = windowType.GetMethod("OpenHoveredItemPropertyEditor", BindingFlags.Static | BindingFlags.NonPublic);
             builderMethod.Invoke(null, new object[] { null });
         }
+    }
+
+    private void ClearHistory()
+    {
+        history.Clear();
+        LimitAndOrderHistory();
+    }
+    private void ClearPinned()
+    {
+        pinned.Clear();
+        LimitAndOrderHistory();
     }
 
     private void Save()
