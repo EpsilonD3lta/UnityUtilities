@@ -1,7 +1,5 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Reflection;
 using UnityEditor;
@@ -10,22 +8,19 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
 
-// TODO: Save on disk
 public class AssetsHistory : EditorWindow, IHasCustomMenu
 {
-    private const int rowHeight = 16;
+    protected const int rowHeight = 16;
+    protected const int minColumnWidth = 150;
     private static string prefId => PlayerSettings.companyName + "." +
         PlayerSettings.productName + ".EpsilonDelta.MeasureTool.";
 
     private static class Styles
     {
-        public static GUIStyle foldout = "IN Foldout";
         public static GUIStyle insertion = "TV Insertion";
-        public static GUIStyle ping = "TV Ping";
-        public static GUIStyle toolbarButton = "ToolbarButton";
         public static GUIStyle lineStyle = "TV Line";
-        public static GUIStyle lineBoldStyle = "TV LineBold";
         public static GUIStyle selectionStyle = "TV Selection";
+        public static GUIStyle pingButtonStyle;
         public static bool areStylesSet;
     }
 
@@ -33,7 +28,7 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
     private List<Object> groupedHistory = new List<Object>();
     private List<Object> history = new List<Object>();
     private List<Object> pinned = new List<Object>();
-    private Object lastGlobalSelectedObject;
+    protected Object lastGlobalSelectedObject;
     private Object currentMouseUppedObject;
     private int limit = 10;
 
@@ -41,30 +36,23 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
     private static void CreateWindow()
     {
         var window = GetWindow(typeof(AssetsHistory), false, "Assets History") as AssetsHistory;
+        window.minSize = new Vector2(100, rowHeight + 1);
         window.Show();
     }
 
-    [MenuItem("Window/Hierarchy History")]
-    private static void CreateHierarchyHistory()
-    {
-        AssetsHistory window = CreateInstance<AssetsHistory>();
-        window.titleContent = EditorGUIUtility.TrTextContent("Hierarchy History");
-        window.Show();
-    }
-
-    public virtual void AddItemsToMenu(GenericMenu menu)
+    public void AddItemsToMenu(GenericMenu menu)
     {
         menu.AddItem(EditorGUIUtility.TrTextContent("Test"), false, Test);
         menu.AddItem(EditorGUIUtility.TrTextContent("Clear History"), false, ClearHistory);
         menu.AddItem(EditorGUIUtility.TrTextContent("Clear Pinned"), false, ClearPinned);
     }
 
-    private void Awake()
+    protected virtual void Awake()
     {
-        Load();
+        LoadHistoryFromEditorPrefs();
     }
 
-    private void OnEnable()
+    protected virtual void OnEnable()
     {
         // This is received even if invisible
         Selection.selectionChanged -= SelectionChange;
@@ -73,22 +61,20 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
         AssetImportHistory.assetImported += AssetImported;
         EditorSceneManager.sceneOpened -= SceneOpened;
         EditorSceneManager.sceneOpened += SceneOpened;
-        EditorApplication.quitting -= Save;
-        EditorApplication.quitting += Save;
+        EditorApplication.quitting -= SaveHistoryToEditorPrefs;
+        EditorApplication.quitting += SaveHistoryToEditorPrefs;
         wantsMouseEnterLeaveWindow = true;
         wantsMouseMove = true;
 
         LimitAndOrderHistory();
-        //EditorApplication.update += Test;
     }
 
     private void Test()
     {
         Debug.Log(this.GetHashCode());
-
     }
 
-    // This is received only when visible
+    // This is received only when window is visible
     private void OnSelectionChange()
     {
         Repaint();
@@ -101,19 +87,22 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
         var height = position.height;
         var width = position.width;
         int lines = Mathf.FloorToInt(height / rowHeight);
+        int columns = Mathf.FloorToInt(width / minColumnWidth);
+        if (columns <= 1) columns = 2;
+        float columnWidth = width / columns;
         float xPos = 0, yPos = 0;
         bool shouldLimitAndOrderHistory = false;
         bool isAnyShortRectHover = false;
-        hoverObject = null;
+        bool isAnyHover = false;
 
         AddPinnedOnGlobalAltClick(ev);
-        if (limit != lines * 2)
+        if (limit != lines * columns)
         {
-            limit = lines * 2;
+            limit = lines * columns;
             LimitAndOrderHistory();
         }
         if (ev.type == EventType.MouseMove) Repaint();
-        KeyboardNavigation(ev);
+        if (ev.type == EventType.KeyDown) KeyboardNavigation(ev);
         for (int i = 0; i < groupedHistory.Count; i++)
         {
             var asset = groupedHistory[i];
@@ -121,21 +110,18 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
             {
                 history.Remove(asset);
                 pinned.Remove(asset);
-                shouldLimitAndOrderHistory = true;
+                shouldLimitAndOrderHistory = true; // Don't modify groupedHistory in this loop
                 continue;
             }
 
-            if (i == lines)
-            {
-                xPos += width / 2; yPos = 0;
-            }
-            Rect fullRect = new Rect(xPos, yPos, width / 2, rowHeight);
-            Rect shortRect = new Rect(xPos, yPos, width / 2 - rowHeight, rowHeight);
+            Rect fullRect = new Rect(xPos, yPos, columnWidth, rowHeight);
+            Rect shortRect = new Rect(xPos, yPos, columnWidth - rowHeight, rowHeight);
             Rect pingButtonRect = new Rect(shortRect.xMax, shortRect.yMax - shortRect.height, shortRect.height, shortRect.height);
             bool isSelected = Selection.objects.Contains(asset);
             bool isPinned = pinned.Contains(asset);
             bool isHover = fullRect.Contains(ev.mousePosition);
             bool isShortRectHover = shortRect.Contains(ev.mousePosition);
+            if (isHover) isAnyHover = true;
             if (isShortRectHover) isAnyShortRectHover = true;
             if (isHover) hoverObject = asset;
 
@@ -144,89 +130,47 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
 
             if (isShortRectHover)
             {
-                if (ev.button == 0)
+                if (ev.type == EventType.MouseUp && ev.button == 0 &&  ev.clickCount == 1) // Select on MouseUp
                 {
-                    if (ev.type == EventType.MouseUp && ev.clickCount == 1)
+                    if (ev.modifiers == EventModifiers.Alt) // Add or remove pinned item
                     {
-                        if (ev.modifiers == EventModifiers.Alt)
-                        {
-                            if (!isPinned) pinned.Add(asset);
-                            else pinned.Remove(asset);
-                            shouldLimitAndOrderHistory = true;
-                            ev.Use();
-                        }
-                        else if (ev.modifiers == EventModifiers.Control)
-                            if (!isSelected) Selection.objects = Selection.objects.Append(asset).ToArray();
-                            else Selection.objects = Selection.objects.Where(x => x != asset).ToArray();
-                        else if (ev.modifiers == EventModifiers.Shift)
-                        {
-                            int firstSelected = groupedHistory.FindIndex(x => Selection.objects.Contains(x));
-                            if (firstSelected != -1)
-                            {
-                                int startIndex = Mathf.Min(firstSelected + 1, i);
-                                int count = Mathf.Abs(firstSelected - i);
-                                Selection.objects = Selection.objects.
-                                    Concat(groupedHistory.GetRange(startIndex, count)).Distinct().ToArray();
-                            }
-                            else Selection.objects = Selection.objects.Append(asset).ToArray();
-                        }
-                        else
-                        {
-                            Selection.objects = new Object[] { asset };
-                            currentMouseUppedObject = asset;
-                        }
-                        ev.Use();
-                    }
-                    else if (ev.type == EventType.MouseDown && ev.clickCount == 2)
-                    {
-                        AssetDatabase.OpenAsset(asset);
-                        ev.Use();
-                    }
-                    else if (ev.type == EventType.MouseDrag && DragAndDrop.visualMode == DragAndDropVisualMode.None)
-                    {
-                        DragAndDrop.PrepareStartDrag();
-                        DragAndDrop.visualMode = DragAndDropVisualMode.Move;
-                        if (isSelected)
-                            DragAndDrop.objectReferences = groupedHistory.Where(x => Selection.objects.Contains(x))
-                            .ToArray();
-                        else DragAndDrop.objectReferences = new Object[] { asset };
-                        DragAndDrop.StartDrag("AssetsHistory Drag");
-                        ev.Use();
-                    }
-                    if (ev.type == EventType.DragUpdated)
-                    {
-                        DragAndDrop.visualMode = DragAndDropVisualMode.Generic;
-                        GUI.Label(fullRect, GUIContent.none, Styles.insertion);
-                    }
-                    if (ev.type == EventType.DragPerform && isPinned)
-                    {
-                        DragAndDrop.AcceptDrag();
-                        int k = 0; // Insert would revert order if we do not compensate
-                        foreach (var obj in DragAndDrop.objectReferences)
-                        {
-                            Debug.Log(i);
-                            if (!pinned.Contains(obj)) pinned.Insert(i, obj);
-                            else if (pinned.IndexOf(obj) != i)
-                            {
-                                int insertIndex = pinned.IndexOf(obj) > i ? i + k : i - 1;
-                                Debug.Log(insertIndex);
-                                pinned.Remove(obj);
-                                pinned.Insert(insertIndex, obj);
-                            }
-                            k++;
-                        }
+                        if (!isPinned) pinned.Add(asset);
+                        else pinned.Remove(asset);
                         shouldLimitAndOrderHistory = true;
-                        ev.Use();
                     }
-                }
-                if (ev.type == EventType.MouseDown && ev.button == 1)
-                {
-                    Selection.objects = new Object[] { asset };
-                    EditorUtility.DisplayPopupMenu(
-                        new Rect(ev.mousePosition.x, ev.mousePosition.y, 0, 0), "Assets/", null);
+                    else if (ev.modifiers == EventModifiers.Control) // Ctrl select
+                        if (!isSelected) Selection.objects = Selection.objects.Append(asset).ToArray();
+                        else Selection.objects = Selection.objects.Where(x => x != asset).ToArray();
+                    else if (ev.modifiers == EventModifiers.Shift) // Shift select
+                    {
+                        int firstSelected = groupedHistory.FindIndex(x => Selection.objects.Contains(x));
+                        if (firstSelected != -1)
+                        {
+                            int startIndex = Mathf.Min(firstSelected + 1, i);
+                            int count = Mathf.Abs(firstSelected - i);
+                            Selection.objects = Selection.objects.
+                                Concat(groupedHistory.GetRange(startIndex, count)).Distinct().ToArray();
+                        }
+                        else Selection.objects = Selection.objects.Append(asset).ToArray();
+                    }
+                    else // Ordinary select
+                    {
+                        Selection.activeObject = asset;
+                        currentMouseUppedObject = asset;
+                    }
                     ev.Use();
                 }
-                if (ev.type == EventType.MouseDown && ev.button == 2)
+                else if (ev.type == EventType.MouseDown && ev.button == 0 && ev.clickCount == 2)
+                {
+                    DoubleClick(asset);
+                    ev.Use();
+                }
+                else if (ev.type == EventType.MouseDown && ev.button == 1)
+                {
+                    ContextClick(new Rect(ev.mousePosition.x, ev.mousePosition.y, 0, 0), asset);
+                    ev.Use();
+                }
+                else if (ev.type == EventType.MouseDown && ev.button == 2) // Middle click
                 {
                     if (ev.modifiers == EventModifiers.Control)
                         if (isPinned) pinned.Clear();
@@ -245,31 +189,57 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
                     ev.Use();
                     Repaint();
                 }
+                else if (ev.type == EventType.MouseDrag && ev.button == 0 && // Start dragging this asset
+                    DragAndDrop.visualMode == DragAndDropVisualMode.None)
+                {
+                    DragAndDrop.PrepareStartDrag();
+                    DragAndDrop.visualMode = DragAndDropVisualMode.Move;
+                    if (isSelected)
+                        DragAndDrop.objectReferences = groupedHistory.Where(x => Selection.objects.Contains(x))
+                        .ToArray();
+                    else DragAndDrop.objectReferences = new Object[] { asset };
+                    DragAndDrop.StartDrag("AssetsHistory Drag");
+                    ev.Use();
+                }
+                else if (ev.type == EventType.DragUpdated && ev.button == 0) // Update drag
+                {
+                    DragAndDrop.visualMode = DragAndDropVisualMode.Generic;
+                    GUI.Label(fullRect, GUIContent.none, Styles.insertion);
+                    ev.Use();
+                }
+                else if (ev.type == EventType.DragPerform && ev.button == 0 && isPinned) // Receive drag and drop
+                {
+                    DragAndDrop.AcceptDrag();
+                    int k = 0; // Insert would revert order if we do not compensate
+                    foreach (var obj in DragAndDrop.objectReferences)
+                    {
+                        if (!pinned.Contains(obj)) pinned.Insert(i, obj);
+                        else if (pinned.IndexOf(obj) != i)
+                        {
+                            int insertIndex = pinned.IndexOf(obj) > i ? i + k : i - 1;
+                            pinned.Remove(obj);
+                            pinned.Insert(insertIndex, obj);
+                        }
+                        k++;
+                    }
+                    shouldLimitAndOrderHistory = true;
+                    ev.Use();
+                }
             }
+            // Draw insertion line
             if (isShortRectHover && isPinned && DragAndDrop.visualMode != DragAndDropVisualMode.None)
             {
                 DrawDragInsertionLine(fullRect);
             }
+            // Draw insertion line at the end of pinned if dragging and mouse position is not above any pinned asset
             if (!isAnyShortRectHover && i == pinned.Count && DragAndDrop.visualMode != DragAndDropVisualMode.None)
             {
                 DrawDragInsertionLine(fullRect);
             }
             yPos += rowHeight;
+            if ((i + 1) % lines == 0) { xPos += columnWidth; yPos = 0; } // Draw next column
         }
-        shouldLimitAndOrderHistory = DropObjectToWindow(ev, shouldLimitAndOrderHistory);
-        if (shouldLimitAndOrderHistory) LimitAndOrderHistory();
-        if (ev.type == EventType.MouseLeaveWindow)
-            hoverObject = null;
-    }
-
-    private static void DrawDragInsertionLine(Rect fullRect)
-    {
-        Rect lineRect = new Rect(fullRect.x, fullRect.y - 4, fullRect.width, 3);
-        GUI.Label(lineRect, GUIContent.none, Styles.insertion);
-    }
-
-    private bool DropObjectToWindow(Event ev, bool shouldLimitAndOrderHistory)
-    {
+        // DragAndDrop to window empty space (with no asset rows)
         if (ev.type == EventType.DragUpdated)
         {
             DragAndDrop.visualMode = DragAndDropVisualMode.Generic;
@@ -278,43 +248,78 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
         if (ev.type == EventType.DragPerform)
         {
             DragAndDrop.AcceptDrag();
-            foreach (var obj in DragAndDrop.objectReferences)
-            {
-                if (!pinned.Contains(obj)) pinned.Add(obj);
-                else
-                {
-                    pinned.Remove(obj);
-                    pinned.Add(obj);
-                }
-            }
+            DropObjectToWindow();
             shouldLimitAndOrderHistory = true;
             ev.Use();
         }
+        if (shouldLimitAndOrderHistory) LimitAndOrderHistory();
+        if (!isAnyHover) hoverObject = null;
+    }
 
-        return shouldLimitAndOrderHistory;
+    private void DoubleClick(Object obj)
+    {
+        if (IsAsset(obj)) AssetDatabase.OpenAsset(obj);
+        else if (IsNonAssetGameObject(obj)) SceneView.lastActiveSceneView.FrameSelected();
+    }
+
+    private void ContextClick(Rect rect, Object obj)
+    {
+        Selection.activeObject = obj;
+        if (IsComponent(obj)) OpenObjectContextMenu(rect, obj);
+        else if (IsAsset(obj)) EditorUtility.DisplayPopupMenu(rect, "Assets/", null);
+        else if (IsNonAssetGameObject(obj))
+        {
+            if (Selection.transforms.Length > 0) // Just to be sure it's really a HierarchyGameobject
+                OpenHierarchyContextMenu(Selection.transforms[0].gameObject.GetInstanceID());
+        }
+    }
+
+    private void DropObjectToWindow()
+    {
+        foreach (var obj in DragAndDrop.objectReferences)
+        {
+            if (!pinned.Contains(obj)) pinned.Add(obj);
+            else // Move to the end
+            {
+                pinned.Remove(obj);
+                pinned.Add(obj);
+            }
+        }
     }
 
     private void KeyboardNavigation(Event ev)
     {
-        if (ev.type == EventType.KeyDown && ev.keyCode == KeyCode.DownArrow)
+        if (ev.keyCode == KeyCode.DownArrow)
         {
             int lastHighlightedIndex = groupedHistory.FindLastIndex(x => Selection.objects.Contains(x));
             int selectIndex = Mod(lastHighlightedIndex + 1, groupedHistory.Count);
             Selection.objects = new Object[] { groupedHistory[selectIndex] };
+            ev.Use();
         }
-        if (ev.type == EventType.KeyDown && ev.keyCode == KeyCode.UpArrow)
+        else if (ev.keyCode == KeyCode.UpArrow)
         {
             int lastHighlightedIndex = groupedHistory.FindIndex(x => Selection.objects.Contains(x));
             int selectIndex = Mod(lastHighlightedIndex - 1, groupedHistory.Count);
             Selection.objects = new Object[] { groupedHistory[selectIndex] };
+            ev.Use();
         }
-        if (ev.type == EventType.KeyDown && ev.keyCode == KeyCode.Return)
+        else if (ev.keyCode == KeyCode.Return)
         {
             var asset = history.FirstOrDefault(x => Selection.objects.Contains(x));
-            AssetDatabase.OpenAsset(asset);
+            DoubleClick(asset);
+            ev.Use();
+        }
+        else if (ev.keyCode == KeyCode.Delete)
+        {
+            history.RemoveAll(x => Selection.objects.Contains(x));
+            pinned.RemoveAll(x => Selection.objects.Contains(x));
+            LimitAndOrderHistory();
+            Repaint();
+            ev.Use();
         }
     }
 
+    /// <summary> Ads Last selected item from other windows </summary>
     private void AddPinnedOnGlobalAltClick(Event ev)
     {
         if (lastGlobalSelectedObject != null)
@@ -331,7 +336,7 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
         }
     }
 
-    private void SelectionChange()
+    protected virtual void SelectionChange()
     {
         foreach (var guid in Selection.assetGUIDs)
         {
@@ -355,7 +360,7 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
         LimitAndOrderHistory();
     }
 
-    private void AddToHistory(Object asset)
+    protected void AddToHistory(Object asset)
     {
         if (!history.Contains(asset)) history.Insert(0, asset);
         else MoveToFront(asset);
@@ -368,7 +373,19 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
         history.Insert(0, asset);
     }
 
-    private void LimitAndOrderHistory()
+    private void ClearHistory()
+    {
+        history.Clear();
+        LimitAndOrderHistory();
+    }
+
+    private void ClearPinned()
+    {
+        pinned.Clear();
+        LimitAndOrderHistory();
+    }
+
+    protected void LimitAndOrderHistory()
     {
         history.RemoveAll(x => x == null);
         pinned.RemoveAll(x => x == null);
@@ -379,18 +396,39 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
         groupedHistory.InsertRange(0, pinned);
     }
 
+    private void SaveHistoryToEditorPrefs()
+    {
+        string pinnedPaths = string.Join("|", pinned.Select(x => AssetDatabase.GetAssetPath(x)));
+        EditorPrefs.SetString(prefId + nameof(pinned), pinnedPaths);
+        string historyPaths = string.Join("|", history.Select(x => AssetDatabase.GetAssetPath(x)));
+        EditorPrefs.SetString(prefId + nameof(history), historyPaths);
+    }
+
+    private void LoadHistoryFromEditorPrefs()
+    {
+        string[] pinnedPaths = EditorPrefs.GetString(prefId + nameof(pinned)).Split('|');
+        foreach (var path in pinnedPaths)
+            pinned.Add(AssetDatabase.LoadMainAssetAtPath(path));
+        string[] historyPaths = EditorPrefs.GetString(prefId + nameof(history)).Split('|');
+        foreach (var path in historyPaths)
+            history.Add(AssetDatabase.LoadMainAssetAtPath(path));
+    }
+
     private void DrawAssetRow(Rect rect, int rowHeight, Object asset, bool hover, bool selected, bool pinned)
     {
         Color oldColor = GUI.backgroundColor;
+        Vector2 oldIconSize = EditorGUIUtility.GetIconSize();
+        EditorGUIUtility.SetIconSize(new Vector2(rowHeight, rowHeight));
         bool isDragged = DragAndDrop.objectReferences.Length == 1 && DragAndDrop.objectReferences.Contains(asset);
+
         if (hover && selected) GUI.backgroundColor = new Color(0.9f, 0.9f, 0.9f);
         if (selected) Styles.selectionStyle.Draw(rect, false, false, true, true);
         if ((hover || isDragged) && !selected) Styles.selectionStyle.Draw(rect, false, false, false, false);
+
         var style = Styles.lineStyle;
-        Vector2 oldIconSize = EditorGUIUtility.GetIconSize();
-        EditorGUIUtility.SetIconSize(new Vector2(rowHeight, rowHeight));
-        GUIContent content = EditorGUIUtility.ObjectContent(asset, asset.GetType());
         var oldPadding = style.padding.right;
+
+        GUIContent content = EditorGUIUtility.ObjectContent(asset, asset.GetType());
         if (pinned) style.padding.right += rowHeight;
         style.Draw(rect, content, false, false, selected, true);
         if (pinned)
@@ -399,23 +437,38 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
             Rect pinnedIconRect = new Rect(rect.xMax - 2 * rowHeight, rect.yMax - rowHeight, rowHeight, rowHeight);
             EditorStyles.label.Draw(pinnedIconRect, pinnedIconContent, false, false, true, true);
         }
-        EditorGUIUtility.SetIconSize(oldIconSize);
+
         style.padding.right = oldPadding;
+        EditorGUIUtility.SetIconSize(oldIconSize);
         GUI.backgroundColor = oldColor;
     }
 
     private void DrawPingButton(Rect rect, int rowHeight, Object asset)
     {
+        Color oldBackgroundColor = GUI.backgroundColor;
         Vector2 oldIconSize = EditorGUIUtility.GetIconSize();
-        EditorGUIUtility.SetIconSize(new Vector2(rowHeight / 2, rowHeight / 2));
+        EditorGUIUtility.SetIconSize(new Vector2(rowHeight / 2 + 3, rowHeight / 2 + 3));
+
         var pingButtonContent = EditorGUIUtility.IconContent("HoloLensInputModule Icon");
         pingButtonContent.tooltip = AssetDatabase.GetAssetPath(asset);
-        if (GUI.Button(rect, pingButtonContent))
+
+        if (IsComponent(asset)) GUI.backgroundColor = new Color(1f, 1.5f, 1f);
+        if (!IsAsset(asset)) pingButtonContent = EditorGUIUtility.IconContent("GameObject Icon");
+
+        if (GUI.Button(rect, pingButtonContent, Styles.pingButtonStyle))
         {
             if (Event.current.button == 0) EditorGUIUtility.PingObject(asset);
             else if (Event.current.button == 1) OpenPropertyEditor(asset);
         }
+
         EditorGUIUtility.SetIconSize(oldIconSize);
+        GUI.backgroundColor = oldBackgroundColor;
+    }
+
+    private void DrawDragInsertionLine(Rect fullRect)
+    {
+        Rect lineRect = new Rect(fullRect.x, fullRect.y - 4, fullRect.width, 3);
+        GUI.Label(lineRect, GUIContent.none, Styles.insertion);
     }
 
     private static void SetStyles()
@@ -425,6 +478,9 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
             Styles.lineStyle = new GUIStyle(Styles.lineStyle);
             Styles.lineStyle.alignment = TextAnchor.MiddleLeft;
             Styles.lineStyle.padding.right += rowHeight;
+            Styles.pingButtonStyle = new GUIStyle(GUI.skin.button);
+            Styles.pingButtonStyle.padding = new RectOffset(1, 0, 0, 0);
+            Styles.pingButtonStyle.alignment = TextAnchor.MiddleCenter;
             Styles.areStylesSet = true;
         }
     }
@@ -451,38 +507,80 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
         }
     }
 
-    private void ClearHistory()
+    protected static void OpenHierarchyContextMenu(int itemID)
     {
-        history.Clear();
-        LimitAndOrderHistory();
-    }
-    private void ClearPinned()
-    {
-        pinned.Clear();
-        LimitAndOrderHistory();
+        string windowTypeName = "UnityEditor.SceneHierarchyWindow";
+        var windowType = typeof(Editor).Assembly.GetType(windowTypeName);
+        EditorWindow window = GetWindow(windowType);
+        FieldInfo sceneField = windowType.GetField("m_SceneHierarchy", BindingFlags.Instance | BindingFlags.NonPublic);
+        var sceneHierarchy = sceneField.GetValue(window);
+
+        string hierarchyTypeName = "UnityEditor.SceneHierarchy";
+        var hierarchyType = typeof(Editor).Assembly.GetType(hierarchyTypeName);
+        MethodInfo builderMethod = hierarchyType.GetMethod("ItemContextClick", BindingFlags.Instance | BindingFlags.NonPublic);
+        builderMethod.Invoke(sceneHierarchy, new object[] { itemID });
     }
 
-    private void Save()
+    protected static void OpenObjectContextMenu(Rect rect, Object obj)
     {
-        string pinnedPaths = string.Join("|", pinned.Select(x => AssetDatabase.GetAssetPath(x)));
-        EditorPrefs.SetString(prefId + nameof(pinned), pinnedPaths);
-        string historyPaths = string.Join("|", history.Select(x => AssetDatabase.GetAssetPath(x)));
-        EditorPrefs.SetString(prefId + nameof(history), historyPaths);
-    }
-
-    private void Load()
-    {
-        string[] pinnedPaths = EditorPrefs.GetString(prefId + nameof(pinned)).Split('|');
-        foreach (var path in pinnedPaths)
-            pinned.Add(AssetDatabase.LoadMainAssetAtPath(path));
-        string[] historyPaths = EditorPrefs.GetString(prefId + nameof(history)).Split('|');
-        foreach (var path in historyPaths)
-            history.Add(AssetDatabase.LoadMainAssetAtPath(path));
+        var classType = typeof(EditorUtility);
+        MethodInfo builderMethod =
+            classType.GetMethod("DisplayObjectContextMenu", BindingFlags.Static | BindingFlags.NonPublic, null,
+            new Type[] { typeof(Rect), typeof(Object), typeof(int)}, null);
+        builderMethod.Invoke(null, new object[] { rect, obj, 0 });
     }
 
     private static int Mod(int x, int m)
     {
-        return (x % m + m) % m;
+        return (x % m + m) % m; // Always positive modulus
+    }
+
+    protected static bool IsComponent(Object obj)
+    {
+        return obj is Component;
+    }
+
+    protected static bool IsAsset(Object obj)
+    {
+        return AssetDatabase.Contains(obj);
+    }
+
+    protected static bool IsNonAssetGameObject(Object obj)
+    {
+        return !IsAsset(obj) && obj is GameObject;
+    }
+}
+
+public class HierarchyHistory : AssetsHistory
+{
+    [MenuItem("Window/Hierarchy History")]
+    private static void CreateHierarchyHistory()
+    {
+        var window = GetWindow(typeof(HierarchyHistory), false, "Hierarchy History") as HierarchyHistory;
+        window.minSize = new Vector2(100, rowHeight + 1);
+        window.Show();
+    }
+
+    protected override void Awake() { }
+
+    protected override void OnEnable()
+    {
+        // This is received even if invisible
+        Selection.selectionChanged -= SelectionChange;
+        Selection.selectionChanged += SelectionChange;
+        wantsMouseEnterLeaveWindow = true;
+        wantsMouseMove = true;
+
+        LimitAndOrderHistory();
+    }
+    protected override void SelectionChange()
+    {
+        foreach (var t in Selection.transforms)
+        {
+            lastGlobalSelectedObject = t.gameObject;
+            AddToHistory(t.gameObject);
+            LimitAndOrderHistory();
+        }
     }
 }
 
