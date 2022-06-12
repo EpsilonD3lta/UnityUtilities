@@ -73,6 +73,10 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
     {
         Debug.Log(this.GetHashCode());
     }
+    private void Test2()
+    {
+        Debug.Log(EditorWindow.mouseOverWindow);
+    }
 
     // This is received only when window is visible
     private void OnSelectionChange()
@@ -130,6 +134,7 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
 
             if (isShortRectHover)
             {
+                // Left button
                 if (ev.type == EventType.MouseUp && ev.button == 0 &&  ev.clickCount == 1) // Select on MouseUp
                 {
                     if (ev.modifiers == EventModifiers.Alt) // Add or remove pinned item
@@ -165,11 +170,17 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
                     DoubleClick(asset);
                     ev.Use();
                 }
+                // Right button
                 else if (ev.type == EventType.MouseDown && ev.button == 1)
                 {
-                    ContextClick(new Rect(ev.mousePosition.x, ev.mousePosition.y, 0, 0), asset);
+                    Selection.activeObject = asset;
                     ev.Use();
                 }
+                else if (ev.type == EventType.ContextClick)
+                {
+                    ContextClick(new Rect(ev.mousePosition.x, ev.mousePosition.y, 0, 0), asset);
+                }
+                // Middle button
                 else if (ev.type == EventType.MouseDown && ev.button == 2) // Middle click
                 {
                     if (ev.modifiers == EventModifiers.Control)
@@ -189,6 +200,7 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
                     ev.Use();
                     Repaint();
                 }
+                // Drag
                 else if (ev.type == EventType.MouseDrag && ev.button == 0 && // Start dragging this asset
                     DragAndDrop.visualMode == DragAndDropVisualMode.None)
                 {
