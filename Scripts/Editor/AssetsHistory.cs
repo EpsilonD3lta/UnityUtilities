@@ -29,7 +29,6 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
     private List<Object> history = new List<Object>();
     private List<Object> pinned = new List<Object>();
     protected Object lastGlobalSelectedObject;
-    private Object currentMouseUppedObject;
     private int limit = 10;
 
     [MenuItem("Window/Assets History")]
@@ -42,7 +41,7 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
 
     public void AddItemsToMenu(GenericMenu menu)
     {
-        menu.AddItem(EditorGUIUtility.TrTextContent("Test"), false, Test);
+        menu.AddItem(EditorGUIUtility.TrTextContent("Clear All"), false, ClearAll);
         menu.AddItem(EditorGUIUtility.TrTextContent("Clear History"), false, ClearHistory);
         menu.AddItem(EditorGUIUtility.TrTextContent("Clear Pinned"), false, ClearPinned);
     }
@@ -67,15 +66,6 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
         wantsMouseMove = true;
 
         LimitAndOrderHistory();
-    }
-
-    private void Test()
-    {
-        Debug.Log(this.GetHashCode());
-    }
-    private void Test2()
-    {
-        Debug.Log(EditorWindow.mouseOverWindow);
     }
 
     // This is received only when window is visible
@@ -158,11 +148,8 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
                         }
                         else Selection.objects = Selection.objects.Append(asset).ToArray();
                     }
-                    else // Ordinary select
-                    {
-                        Selection.activeObject = asset;
-                        currentMouseUppedObject = asset;
-                    }
+                    else Selection.activeObject = asset; // Ordinary select
+
                     ev.Use();
                 }
                 else if (ev.type == EventType.MouseDown && ev.button == 0 && ev.clickCount == 2)
@@ -385,6 +372,13 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
         history.Insert(0, asset);
     }
 
+    private void ClearAll()
+    {
+        history.Clear();
+        pinned.Clear();
+        LimitAndOrderHistory();
+    }
+
     private void ClearHistory()
     {
         history.Clear();
@@ -404,7 +398,8 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
         int onlyPinned = pinned.Where(x => !history.Contains(x)).Count();
         int historyLimit = limit - onlyPinned;
         if (history.Count > historyLimit) history = history.Take(historyLimit).ToList();
-        groupedHistory = history.Where(x => !pinned.Contains(x)).OrderBy(x => x.GetType().Name).ThenBy(x => x.name).ToList();
+        groupedHistory = history.Where(x => !pinned.Contains(x)).OrderBy(x => x.GetType().Name).ThenBy(x => x.name).
+            ThenBy(x => x.GetInstanceID()).ToList();
         groupedHistory.InsertRange(0, pinned);
     }
 
@@ -560,39 +555,6 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
     protected static bool IsNonAssetGameObject(Object obj)
     {
         return !IsAsset(obj) && obj is GameObject;
-    }
-}
-
-public class HierarchyHistory : AssetsHistory
-{
-    [MenuItem("Window/Hierarchy History")]
-    private static void CreateHierarchyHistory()
-    {
-        var window = GetWindow(typeof(HierarchyHistory), false, "Hierarchy History") as HierarchyHistory;
-        window.minSize = new Vector2(100, rowHeight + 1);
-        window.Show();
-    }
-
-    protected override void Awake() { }
-
-    protected override void OnEnable()
-    {
-        // This is received even if invisible
-        Selection.selectionChanged -= SelectionChange;
-        Selection.selectionChanged += SelectionChange;
-        wantsMouseEnterLeaveWindow = true;
-        wantsMouseMove = true;
-
-        LimitAndOrderHistory();
-    }
-    protected override void SelectionChange()
-    {
-        foreach (var t in Selection.transforms)
-        {
-            lastGlobalSelectedObject = t.gameObject;
-            AddToHistory(t.gameObject);
-            LimitAndOrderHistory();
-        }
     }
 }
 
