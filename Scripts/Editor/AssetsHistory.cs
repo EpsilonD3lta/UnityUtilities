@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using UnityEditor;
 using UnityEditor.SceneManagement;
+using UnityEditorInternal;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
@@ -148,7 +149,12 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
                         }
                         else Selection.objects = Selection.objects.Append(asset).ToArray();
                     }
-                    else Selection.activeObject = asset; // Ordinary select
+                    else
+                    {
+                        Selection.activeObject = asset; // Ordinary select
+                        if (AssetDatabase.IsValidFolder(AssetDatabase.GetAssetPath(asset)))
+                            ExpandFolder(asset.GetInstanceID(), true);
+                    }
 
                     ev.Use();
                 }
@@ -514,7 +520,7 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
         }
     }
 
-    protected static void OpenHierarchyContextMenu(int itemID)
+    private static void OpenHierarchyContextMenu(int itemID)
     {
         string windowTypeName = "UnityEditor.SceneHierarchyWindow";
         var windowType = typeof(Editor).Assembly.GetType(windowTypeName);
@@ -528,13 +534,40 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
         builderMethod.Invoke(sceneHierarchy, new object[] { itemID });
     }
 
-    protected static void OpenObjectContextMenu(Rect rect, Object obj)
+    // Component menu
+    private static void OpenObjectContextMenu(Rect rect, Object obj)
     {
         var classType = typeof(EditorUtility);
         MethodInfo builderMethod =
             classType.GetMethod("DisplayObjectContextMenu", BindingFlags.Static | BindingFlags.NonPublic, null,
             new Type[] { typeof(Rect), typeof(Object), typeof(int)}, null);
         builderMethod.Invoke(null, new object[] { rect, obj, 0 });
+    }
+
+    private static void ExpandFolder(int instanceID, bool expand)
+    {
+        int[] expandedFolders = InternalEditorUtility.expandedProjectWindowItems;
+        bool isExpanded = expandedFolders.Contains(instanceID);
+        if (expand == isExpanded) return;
+
+        var unityEditorAssembly = Assembly.GetAssembly(typeof(Editor));
+        var projectBrowserType = unityEditorAssembly.GetType("UnityEditor.ProjectBrowser");
+        var projectBrowsers = Resources.FindObjectsOfTypeAll(projectBrowserType);
+
+        foreach (var p in projectBrowsers)
+        {
+            var treeViewControllerType = unityEditorAssembly.GetType("UnityEditor.IMGUI.Controls.TreeViewController");
+            FieldInfo treeViewControllerField =
+                projectBrowserType.GetField("m_AssetTree", BindingFlags.Instance | BindingFlags.NonPublic);
+            // OneColumn has only AssetTree, TwoColumn has also FolderTree
+            var treeViewController = treeViewControllerField.GetValue(p);
+            if (treeViewController == null) continue;
+            var changeGoldingMethod =
+                treeViewControllerType.GetMethod("ChangeFolding", BindingFlags.Instance | BindingFlags.NonPublic);
+            changeGoldingMethod.Invoke(treeViewController, new object[] { new int[] { instanceID }, expand });
+            EditorWindow pw = (EditorWindow)p as EditorWindow;
+            pw.Repaint();
+        }
     }
 
     private static int Mod(int x, int m)

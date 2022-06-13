@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEditor.Callbacks;
@@ -326,7 +327,8 @@ public class FileUtilities : Editor
     }
 
     // This should fold out/in folders on double click
-    // Does not work in two columns layout, maybe could be invoked from EditorApplication.update
+    // Does not work well in two columns layout
+    //[OnOpenAsset(1)]
     public static bool OnOpenFolder2(int instanceID, int line)
     {
         Object asset = EditorUtility.InstanceIDToObject(instanceID);
@@ -335,18 +337,41 @@ public class FileUtilities : Editor
         {
             int[] expandedFolders = InternalEditorUtility.expandedProjectWindowItems;
             bool isExpanded = expandedFolders.Contains(instanceID);
-            EditorWindow focusedWindow = EditorWindow.focusedWindow;
-            if (focusedWindow != null)
-            {
-                focusedWindow.SendEvent(new Event
-                {
-                    keyCode = isExpanded ? KeyCode.LeftArrow : KeyCode.RightArrow,
-                    type = EventType.KeyDown,
-                    alt = Event.current.modifiers == EventModifiers.Alt
-                });
-            }
+            ExpandFolder(instanceID, !isExpanded);
             return true;
         }
         else return false;
+    }
+
+    public static void ExpandFolder(int instanceID, bool expand)
+    {
+        int[] expandedFolders = InternalEditorUtility.expandedProjectWindowItems;
+        bool isExpanded = expandedFolders.Contains(instanceID);
+        if (expand == isExpanded) return;
+
+        var unityEditorAssembly = Assembly.GetAssembly(typeof(Editor));
+        var projectBrowserType = unityEditorAssembly.GetType("UnityEditor.ProjectBrowser");
+        var projectBrowsers = Resources.FindObjectsOfTypeAll(projectBrowserType);
+
+        foreach (var p in projectBrowsers)
+        {
+            var treeViewControllerType = unityEditorAssembly.GetType("UnityEditor.IMGUI.Controls.TreeViewController");
+            FieldInfo treeViewControllerField =
+                projectBrowserType.GetField("m_AssetTree", BindingFlags.Instance | BindingFlags.NonPublic);
+            var treeViewController = treeViewControllerField.GetValue(p);
+            // For two columns layout
+            //if (treeViewController == null)
+            //{
+            //    treeViewControllerField =
+            //        projectBrowserType.GetField("m_FolderTree", BindingFlags.Instance | BindingFlags.NonPublic);
+            //    treeViewController = treeViewControllerField.GetValue(p);
+            //}
+            if (treeViewController == null) continue;
+            var changeGoldingMethod =
+                treeViewControllerType.GetMethod("ChangeFolding", BindingFlags.Instance | BindingFlags.NonPublic);
+            changeGoldingMethod.Invoke(treeViewController, new object[] { new int[] { instanceID }, expand });
+            EditorWindow pw = (EditorWindow)p as EditorWindow;
+            pw.Repaint();
+        }
     }
 }
