@@ -492,7 +492,7 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
             Styles.lineStyle.alignment = TextAnchor.MiddleLeft;
             Styles.lineStyle.padding.right += rowHeight;
             Styles.pingButtonStyle = new GUIStyle(GUI.skin.button);
-            Styles.pingButtonStyle.padding = new RectOffset(1, 0, 0, 0);
+            Styles.pingButtonStyle.padding = new RectOffset(2, 0, 0, 1);
             Styles.pingButtonStyle.alignment = TextAnchor.MiddleCenter;
             Styles.areStylesSet = true;
         }
