@@ -26,9 +26,9 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
     }
 
     private Object hoverObject;
-    private List<Object> groupedHistory = new List<Object>();
-    private List<Object> history = new List<Object>();
-    private List<Object> pinned = new List<Object>();
+    protected List<Object> groupedHistory = new List<Object>();
+    protected List<Object> history = new List<Object>();
+    protected List<Object> pinned = new List<Object>();
     protected Object lastGlobalSelectedObject;
     private int limit = 10;
 
@@ -121,20 +121,14 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
             if (isHover) hoverObject = asset;
 
             if (ev.type == EventType.Repaint) DrawAssetRow(fullRect, rowHeight, asset, isHover, isSelected, isPinned);
-            DrawPingButton(pingButtonRect, rowHeight, asset);
+            if (DrawPingButton(pingButtonRect, rowHeight, asset, isPinned)) shouldLimitAndOrderHistory = true;
 
             if (isShortRectHover)
             {
                 // Left button
                 if (ev.type == EventType.MouseUp && ev.button == 0 &&  ev.clickCount == 1) // Select on MouseUp
                 {
-                    if (ev.modifiers == EventModifiers.Alt) // Add or remove pinned item
-                    {
-                        if (!isPinned) pinned.Add(asset);
-                        else pinned.Remove(asset);
-                        shouldLimitAndOrderHistory = true;
-                    }
-                    else if (ev.modifiers == EventModifiers.Control) // Ctrl select
+                    if (ev.modifiers == EventModifiers.Control) // Ctrl select
                         if (!isSelected) Selection.objects = Selection.objects.Append(asset).ToArray();
                         else Selection.objects = Selection.objects.Where(x => x != asset).ToArray();
                     else if (ev.modifiers == EventModifiers.Shift) // Shift select
@@ -283,12 +277,7 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
     {
         foreach (var obj in DragAndDrop.objectReferences)
         {
-            if (!pinned.Contains(obj)) pinned.Add(obj);
-            else // Move to the end
-            {
-                pinned.Remove(obj);
-                pinned.Add(obj);
-            }
+            AddToEnd(obj, pinned);
         }
     }
 
@@ -347,35 +336,34 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
         {
             var path = AssetDatabase.GUIDToAssetPath(guid);
             var asset = AssetDatabase.LoadMainAssetAtPath(path);
-            lastGlobalSelectedObject = asset;
-            AddToHistory(asset);
+            if (focusedWindow != this) lastGlobalSelectedObject = asset;
+            AddToFront(asset, history);
             LimitAndOrderHistory();
         }
     }
 
     private void AssetImported(Object asset)
     {
-        AddToHistory(asset);
+        AddToFront(asset, history);
         LimitAndOrderHistory();
     }
 
-    private void SceneOpened(Scene scene, OpenSceneMode mode)
+    protected virtual void SceneOpened(Scene scene, OpenSceneMode mode)
     {
-        AddToHistory(AssetDatabase.LoadAssetAtPath<SceneAsset>(scene.path));
+        AddToFront(AssetDatabase.LoadAssetAtPath<SceneAsset>(scene.path), history);
         LimitAndOrderHistory();
     }
 
-    protected void AddToHistory(Object asset)
+    protected void AddToFront<T>(T obj, List<T> list)
     {
-        if (!history.Contains(asset)) history.Insert(0, asset);
-        else MoveToFront(asset);
+        list.Remove(obj);
+        list.Insert(0, obj);
     }
 
-    private void MoveToFront(Object asset)
+    private void AddToEnd<T>(T obj, List<T> list)
     {
-        var index = history.IndexOf(asset);
-        history.RemoveAt(index);
-        history.Insert(0, asset);
+        list.Remove(obj);
+        list.Add(obj);
     }
 
     private void ClearAll()
@@ -397,7 +385,7 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
         LimitAndOrderHistory();
     }
 
-    protected void LimitAndOrderHistory()
+    protected virtual void LimitAndOrderHistory()
     {
         history.RemoveAll(x => x == null);
         pinned.RemoveAll(x => x == null);
@@ -456,8 +444,9 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
         GUI.backgroundColor = oldColor;
     }
 
-    private void DrawPingButton(Rect rect, int rowHeight, Object asset)
+    private bool DrawPingButton(Rect rect, int rowHeight, Object asset, bool isPinned)
     {
+        bool clicked = false;
         Color oldBackgroundColor = GUI.backgroundColor;
         Vector2 oldIconSize = EditorGUIUtility.GetIconSize();
         EditorGUIUtility.SetIconSize(new Vector2(rowHeight / 2 + 3, rowHeight / 2 + 3));
@@ -470,12 +459,22 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
 
         if (GUI.Button(rect, pingButtonContent, Styles.pingButtonStyle))
         {
-            if (Event.current.button == 0) EditorGUIUtility.PingObject(asset);
+            if (Event.current.button == 0)
+            {
+                if (Event.current.modifiers == EventModifiers.Alt) // Add or remove pinned item
+                {
+                    if (!isPinned) pinned.Add(asset);
+                    else pinned.Remove(asset);
+                    clicked = true; // Only return clicked if we change something
+                }
+                else EditorGUIUtility.PingObject(asset);
+            }
             else if (Event.current.button == 1) OpenPropertyEditor(asset);
         }
 
         EditorGUIUtility.SetIconSize(oldIconSize);
         GUI.backgroundColor = oldBackgroundColor;
+        return clicked;
     }
 
     private void DrawDragInsertionLine(Rect fullRect)
