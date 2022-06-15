@@ -5,8 +5,8 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
-public class MarkAssetsDirty : EditorWindow
-{
+public class MarkAssetsDirty
+{ 
     [MenuItem("Assets/Mark Assets Dirty", priority = 38)]
     public static void MarkDirty()
     {
