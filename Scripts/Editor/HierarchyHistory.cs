@@ -274,14 +274,29 @@ public class HierarchyHistory : AssetsHistory, ISerializationCallbackReceiver
                 AssetDatabase.LoadMainAssetAtPath(prefabStage.assetPath));
 
             if (perObjectHistory.ContainsKey(prefabGid))
+            {
                 perObjectHistory[prefabGid].RemoveAll(x => ComparePrefabObjectInstance(x, gid));
+                if (perObjectHistory[prefabGid].Count == 0)
+                {
+                    perObjectHistory.Remove(prefabGid);
+                    EditorPrefs.DeleteKey(prefId + nameof(perObjectHistoryValues) + prefabGid);
+                }
+            }
         }
         else if (IsSceneObject(obj, out GameObject go) && !string.IsNullOrEmpty(go.scene.path))
         {
             var sceneGid = GlobalObjectId.GetGlobalObjectIdSlow(
                 AssetDatabase.LoadAssetAtPath<SceneAsset>(go.scene.path));
             if (perObjectHistory.ContainsKey(sceneGid))
+            {
                 perObjectHistory[sceneGid].Remove(gid);
+                if (perObjectHistory[sceneGid].Count == 0)
+                {
+                    perObjectHistory.Remove(sceneGid);
+                    EditorPrefs.DeleteKey(prefId + nameof(perObjectHistoryValues) + sceneGid);
+                }
+            }
+
         }
     }
 
@@ -306,15 +321,54 @@ public class HierarchyHistory : AssetsHistory, ISerializationCallbackReceiver
                 AssetDatabase.LoadMainAssetAtPath(prefabStage.assetPath));
 
             if (perObjectPinned.ContainsKey(prefabGid))
+            {
                 perObjectPinned[prefabGid].RemoveAll(x => ComparePrefabObjectInstance(x, gid));
+                if (perObjectPinned[prefabGid].Count == 0)
+                {
+                    perObjectPinned.Remove(prefabGid);
+                    EditorPrefs.DeleteKey(prefId + nameof(perObjectPinnedValues) + prefabGid);
+                }
+            }
         }
         else if (IsSceneObject(obj, out GameObject go) && !string.IsNullOrEmpty(go.scene.path))
         {
             var sceneGid = GlobalObjectId.GetGlobalObjectIdSlow(
                 AssetDatabase.LoadAssetAtPath<SceneAsset>(go.scene.path));
             if (perObjectPinned.ContainsKey(sceneGid))
+            {
                 perObjectPinned[sceneGid].Remove(gid);
+                if (perObjectPinned[sceneGid].Count == 0)
+                {
+                    perObjectPinned.Remove(sceneGid);
+                    EditorPrefs.DeleteKey(prefId + nameof(perObjectPinnedValues) + sceneGid);
+                }
+            }
         }
+        else
+        {
+            int countLoaded = EditorSceneManager.sceneCount;
+            Scene[] loadedScenes = new Scene[countLoaded];
+            for (int i = 0; i < countLoaded; i++)
+            {
+                loadedScenes[i] = EditorSceneManager.GetSceneAt(i);
+            }
+            foreach (var scene in loadedScenes)
+            {
+                var sceneGid = GlobalObjectId.GetGlobalObjectIdSlow(
+                    AssetDatabase.LoadAssetAtPath<SceneAsset>(scene.path));
+                if (perObjectPinned.ContainsKey(sceneGid) && perObjectPinned[sceneGid].Contains(gid))
+                {
+                    perObjectPinned[sceneGid].Remove(gid);
+                    if (perObjectPinned[sceneGid].Count == 0)
+                    {
+                        perObjectPinned.Remove(sceneGid);
+                        EditorPrefs.DeleteKey(prefId + nameof(perObjectPinnedValues) + sceneGid);
+                    }
+                    break;
+                }
+            }
+        }
+
     }
 
     protected override void RemoveAllPinned(Predicate<Object> predicate)
