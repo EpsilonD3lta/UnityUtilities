@@ -9,8 +9,9 @@ using System;
 #if !UNITY_2021_2_OR_NEWER
 using UnityEditor.Experimental.SceneManagement; // Out of experimental in 2021.2
 #endif
-// TODO: optimize, don't save to editorprefs?
-public class HierarchyHistory : AssetsHistory, ISerializationCallbackReceiver
+// TODO: optimize, don't save to editorprefs?, inactive gameobjects - change color of text
+// added gameobjects to prefabs - change icon at least?
+public class HierarchyHistory : AssetsHistory
 {
     protected override string prefId => PlayerSettings.companyName + "." +
     PlayerSettings.productName + ".EpsilonDelta.HierarchyHistory.";
@@ -19,6 +20,8 @@ public class HierarchyHistory : AssetsHistory, ISerializationCallbackReceiver
     new Dictionary<GlobalObjectId, List<GlobalObjectId>>();
     protected Dictionary<GlobalObjectId, List<GlobalObjectId>> perObjectPinned =
     new Dictionary<GlobalObjectId, List<GlobalObjectId>>();
+
+    private GlobalObjectId nullGid = default;
 
     [SerializeField]
     private List<string> perObjectHistoryKeys = new List<string>();
@@ -51,37 +54,78 @@ public class HierarchyHistory : AssetsHistory, ISerializationCallbackReceiver
         window.Show();
     }
 
+    public override void AddItemsToMenu(GenericMenu menu)
+    {
+        base.AddItemsToMenu(menu);
+        menu.AddItem(EditorGUIUtility.TrTextContent("Clear All for All Objects"), false, ClearAllForAllObjects);
+    }
+
+    protected override void Awake()
+    {
+        //Debug.Log("custom awake");
+        base.Awake();
+    }
+
     protected override void Test()
     {
-        PrefabStageOpened(PrefabStageUtility.GetCurrentPrefabStage());
+        string k = null;
+        List<string> l = new List<string>() { null };
+        k = string.Join("|", l);
+        //Debug.Log(k == "");
     }
 
     protected override void OnEnable()
     {
+        //Debug.Log("custom enable");
+        OnAfterDeserialize();
         // This is received even if invisible
-        Selection.selectionChanged -= SelectionChange;
-        Selection.selectionChanged += SelectionChange;
+        Selection.selectionChanged -= SelectionChanged;
+        Selection.selectionChanged += SelectionChanged;
+        EditorApplication.hierarchyChanged -= HierarchyChanged;
+        EditorApplication.hierarchyChanged += HierarchyChanged;
         PrefabStage.prefabStageOpened -= PrefabStageOpened;
         PrefabStage.prefabStageOpened += PrefabStageOpened;
         PrefabStage.prefabStageClosing -= PrefabStageClosing;
         PrefabStage.prefabStageClosing += PrefabStageClosing;
         EditorSceneManager.sceneOpened -= SceneOpened;
         EditorSceneManager.sceneOpened += SceneOpened;
+        EditorApplication.quitting -= OnBeforeSerialize;
+        EditorApplication.quitting += OnBeforeSerialize;
         EditorApplication.quitting -= SaveHistoryToEditorPrefs;
         EditorApplication.quitting += SaveHistoryToEditorPrefs;
         wantsMouseEnterLeaveWindow = true;
         wantsMouseMove = true;
 
+        var prefabStage = PrefabStageUtility.GetCurrentPrefabStage();
+        if (prefabStage) LoadPrefabHistory(prefabStage);
+        else LoadOpenScenesHistory();
+
         LimitAndOrderHistory();
     }
+    private void OnDisable()
+    {
+        //Debug.Log("custom disable");
+        OnBeforeSerialize();
+    }
 
-    protected override void SelectionChange()
+    void OnDestroy()
+    {
+        //Debug.Log("custom destroy");
+        SaveHistoryToEditorPrefs();
+    }
+
+    protected override void SelectionChanged()
     {
         foreach (var t in Selection.transforms)
         {
             AddHistory(t.gameObject);
         }
         LimitAndOrderHistory();
+    }
+
+    private void HierarchyChanged()
+    {
+        Repaint();
     }
 
     protected override void SceneOpened(Scene scene, OpenSceneMode mode)
@@ -92,7 +136,7 @@ public class HierarchyHistory : AssetsHistory, ISerializationCallbackReceiver
 
     private void PrefabStageOpened(PrefabStage prefabStage)
     {
-        history.Clear(); // Prefab stage closing does not need this
+        history.Clear();
         pinned.Clear();
         LoadPrefabHistory(prefabStage);
         LimitAndOrderHistory();
@@ -101,6 +145,8 @@ public class HierarchyHistory : AssetsHistory, ISerializationCallbackReceiver
 
     private void PrefabStageClosing(PrefabStage prefabStage)
     {
+        // If we switch to other prefab, Closing old stage is called after opening new stage
+        if (PrefabStageUtility.GetCurrentPrefabStage() != null) return;
         history.Clear();
         pinned.Clear();
         LoadOpenScenesHistory();
@@ -113,7 +159,7 @@ public class HierarchyHistory : AssetsHistory, ISerializationCallbackReceiver
         var prefabAsset = AssetDatabase.LoadMainAssetAtPath(prefabStage.assetPath);
         var prefabRoot = prefabStage.prefabContentsRoot;
         var prefabGid = GlobalObjectId.GetGlobalObjectIdSlow(prefabAsset);
-        var prefabChildren = prefabRoot.GetComponentsInChildren<Transform>();
+        var prefabChildren = prefabRoot.GetComponentsInChildren<Transform>(true);
         if (perObjectPinned.ContainsKey(prefabGid))
         {
             foreach (var gid in perObjectPinned[prefabGid])
@@ -131,7 +177,6 @@ public class HierarchyHistory : AssetsHistory, ISerializationCallbackReceiver
                 if (obj) AddToEnd(obj, history);
             }
         }
-        RemoveHistory(prefabRoot);
     }
 
     private void LoadOpenScenesHistory()
@@ -172,16 +217,27 @@ public class HierarchyHistory : AssetsHistory, ISerializationCallbackReceiver
 
     protected override void AddHistory(Object obj)
     {
+        var objGid = GlobalObjectId.GetGlobalObjectIdSlow(obj);
+        if (objGid.ToString() == nullGid.ToString())
+        {
+            AddToFront(obj, history);
+            return;
+        }
+
         PrefabStage prefabStage = PrefabStageUtility.GetCurrentPrefabStage();
         GlobalObjectId prefabGid = new GlobalObjectId();
         if (prefabStage != null)
             prefabGid = GlobalObjectId.GetGlobalObjectIdSlow(AssetDatabase.LoadMainAssetAtPath(prefabStage.assetPath));
-        var objGid = GlobalObjectId.GetGlobalObjectIdSlow(obj);
         if (prefabStage != null)
         {
             if (!perObjectHistory.ContainsKey(prefabGid)) perObjectHistory[prefabGid] = new List<GlobalObjectId>();
-
-            AddToFront(objGid, perObjectHistory[prefabGid], 10);
+            var subPrefabGid = ConstructGid(objGid.identifierType, prefabGid.assetGUID.ToString(), objGid.targetObjectId,
+                objGid.targetPrefabId);
+            if (!ComparePrefabObjectInstance(prefabGid, objGid))
+            {
+                AddToFront(obj, history);
+                AddToFront(subPrefabGid, perObjectHistory[prefabGid]);
+            }
         }
         else if (IsSceneObject(obj, out GameObject go) && !string.IsNullOrEmpty(go.scene.path))
         {
@@ -189,9 +245,9 @@ public class HierarchyHistory : AssetsHistory, ISerializationCallbackReceiver
                 AssetDatabase.LoadAssetAtPath<SceneAsset>(go.scene.path));
             if (!perObjectHistory.ContainsKey(sceneGid)) perObjectHistory[sceneGid] = new List<GlobalObjectId>();
 
-            AddToFront(objGid, perObjectHistory[sceneGid], 10);
+            AddToFront(obj, history);
+            AddToFront(objGid, perObjectHistory[sceneGid]);
         }
-        base.AddHistory(obj);
     }
 
     protected override void AddPinned(Object obj, int i = -1)
@@ -201,6 +257,8 @@ public class HierarchyHistory : AssetsHistory, ISerializationCallbackReceiver
         if (prefabStage != null)
             prefabGid = GlobalObjectId.GetGlobalObjectIdSlow(AssetDatabase.LoadMainAssetAtPath(prefabStage.assetPath));
         var objGid = GlobalObjectId.GetGlobalObjectIdSlow(obj);
+        bool isNullGid = objGid.ToString() == nullGid.ToString();
+
         if (prefabStage != null)
         {
             if (!perObjectPinned.ContainsKey(prefabGid)) perObjectPinned[prefabGid] = new List<GlobalObjectId>();
@@ -214,7 +272,7 @@ public class HierarchyHistory : AssetsHistory, ISerializationCallbackReceiver
             {
                 RemovePinned(obj);
                 pinned.Insert(i, obj);
-                perObjectPinned[prefabGid].Insert(i, objGid);
+                if (!isNullGid) perObjectPinned[prefabGid].Insert(i, objGid);
             }
         }
         else if (IsSceneObject(obj, out GameObject go) && !string.IsNullOrEmpty(go.scene.path))
@@ -225,7 +283,7 @@ public class HierarchyHistory : AssetsHistory, ISerializationCallbackReceiver
 
             if (i == -1)
             {
-                AddToEnd(objGid, perObjectPinned[sceneGid]);
+                if (!isNullGid) AddToEnd(objGid, perObjectPinned[sceneGid]);
                 AddToEnd(obj, pinned);
             }
             else
@@ -244,14 +302,14 @@ public class HierarchyHistory : AssetsHistory, ISerializationCallbackReceiver
 
             if (i == -1)
             {
-                AddToEnd(objGid, perObjectPinned[sceneGid]);
+                if (!isNullGid) AddToEnd(objGid, perObjectPinned[sceneGid]);
                 AddToEnd(obj, pinned);
             }
             else
             {
                 RemovePinned(obj);
                 pinned.Insert(i, obj);
-                perObjectPinned[sceneGid].Insert(i, objGid);
+                if (!isNullGid) perObjectPinned[sceneGid].Insert(i, objGid);
             }
         }
     }
@@ -313,8 +371,9 @@ public class HierarchyHistory : AssetsHistory, ISerializationCallbackReceiver
         base.RemovePinned(obj);
         if (obj == null) return;
 
-        PrefabStage prefabStage = PrefabStageUtility.GetCurrentPrefabStage();
         GlobalObjectId gid = GlobalObjectId.GetGlobalObjectIdSlow(obj);
+        PrefabStage prefabStage = PrefabStageUtility.GetCurrentPrefabStage();
+
         if (prefabStage != null)
         {
             GlobalObjectId prefabGid = GlobalObjectId.GetGlobalObjectIdSlow(
@@ -379,6 +438,27 @@ public class HierarchyHistory : AssetsHistory, ISerializationCallbackReceiver
         }
     }
 
+    private void ClearAllForAllObjects()
+    {
+        ClearAll();
+        foreach (var key in perObjectHistory.Keys)
+        {
+            EditorPrefs.DeleteKey(prefId + nameof(perObjectHistoryValues) + key);
+        }
+        perObjectHistory.Clear();
+        perObjectHistoryKeys.Clear();
+        perObjectHistoryValues.Clear();
+
+        foreach (var key in perObjectPinned.Keys)
+        {
+            EditorPrefs.DeleteKey(prefId + nameof(perObjectPinnedValues) + key);
+        }
+        perObjectPinned.Clear();
+        perObjectPinnedKeys.Clear();
+        perObjectPinnedValues.Clear();
+        SaveHistoryToEditorPrefs();
+    }
+
     protected override void ClearAll()
     {
         RemoveAllHistory(_ => true);
@@ -420,12 +500,14 @@ public class HierarchyHistory : AssetsHistory, ISerializationCallbackReceiver
 
     protected override void SaveHistoryToEditorPrefs()
     {
+        //Debug.Log("custom save");
         string pinnedGidKeys = string.Join("|", perObjectPinnedKeys);
         EditorPrefs.SetString(prefId + nameof(perObjectPinnedKeys), pinnedGidKeys);
 
         for (int i = 0; i < perObjectPinnedKeys.Count; i++)
         {
-            string pinnedGidValue = string.Join("|", perObjectPinnedValues[i]);
+            if (string.IsNullOrEmpty(perObjectPinnedKeys[i])) continue;
+            string pinnedGidValue = string.Join("|", perObjectPinnedValues[i].list);
             EditorPrefs.SetString(prefId + nameof(perObjectPinnedValues) + perObjectPinnedKeys[i], pinnedGidValue);
         }
 
@@ -434,14 +516,17 @@ public class HierarchyHistory : AssetsHistory, ISerializationCallbackReceiver
 
         for (int i = 0; i < perObjectHistoryKeys.Count; i++)
         {
-            string historyGidValue = string.Join("|", perObjectHistoryValues[i]);
+            if (string.IsNullOrEmpty(perObjectHistoryKeys[i])) continue;
+            string historyGidValue = string.Join("|", perObjectHistoryValues[i].list);
             EditorPrefs.SetString(prefId + nameof(perObjectHistoryValues) + perObjectHistoryKeys[i], historyGidValue);
         }
     }
 
     protected override void LoadHistoryFromEditorPrefs()
     {
+        //Debug.Log("custom load");
         perObjectPinnedKeys = EditorPrefs.GetString(prefId + nameof(perObjectPinnedKeys)).Split('|').ToList();
+        perObjectPinnedKeys.RemoveAll(x => string.IsNullOrEmpty(x));
         for (int i = 0; i < perObjectPinnedKeys.Count; i++)
         {
             perObjectPinnedValues.Add(
@@ -450,19 +535,23 @@ public class HierarchyHistory : AssetsHistory, ISerializationCallbackReceiver
         }
 
         perObjectHistoryKeys = EditorPrefs.GetString(prefId + nameof(perObjectHistoryKeys)).Split('|').ToList();
+        perObjectHistoryKeys.RemoveAll(x => string.IsNullOrEmpty(x));
         for (int i = 0; i < perObjectHistoryKeys.Count; i++)
         {
             perObjectHistoryValues.Add(
                 EditorPrefs.GetString(prefId + nameof(perObjectHistoryValues) + perObjectHistoryKeys[i])
                 .Split('|').ToList());
         }
-
-        OnAfterDeserialize(); // This is called before this method on project open
-        LoadOpenScenesHistory();
+        //Debug.Log(perObjectHistoryKeys.Serialize());
+        //Debug.Log(perObjectHistoryValues.Select(x => x.list).Serialize());
     }
 
+    // ISerializationCallbackReceiver is not called when window is closed, so we handle it manually in OnEnable/Disable
+    // Recompilation - awake/destroy not called, only OnEnable/Disable
+    // Closing and opening window - Awake, Destroy, OnEnable, OnDisable are all called
     public void OnBeforeSerialize()
     {
+        //Debug.Log("custom before serialize");
         perObjectPinnedKeys.Clear();
         perObjectPinnedValues.Clear();
         foreach (KeyValuePair<GlobalObjectId, List<GlobalObjectId>> pair in perObjectPinned)
@@ -478,10 +567,13 @@ public class HierarchyHistory : AssetsHistory, ISerializationCallbackReceiver
             perObjectHistoryKeys.Add(pair.Key.ToString());
             perObjectHistoryValues.Add(pair.Value.Select(x => x.ToString()).ToList());
         }
+        //Debug.Log(perObjectHistoryKeys.Serialize());
+        //Debug.Log(perObjectHistoryValues.Select(x => x.list).Serialize());
     }
 
     public void OnAfterDeserialize()
     {
+        //Debug.Log("custom after deserialize");
         perObjectPinned.Clear();
         for (int i = 0; i < perObjectPinnedKeys.Count; i++)
         {
@@ -495,9 +587,18 @@ public class HierarchyHistory : AssetsHistory, ISerializationCallbackReceiver
         }
     }
 
-    private GlobalObjectId Parse(string id)
+    private GlobalObjectId Parse(string gidString)
     {
-        GlobalObjectId.TryParse(id, out GlobalObjectId gid);
+        GlobalObjectId.TryParse(gidString, out GlobalObjectId gid);
         return gid;
+    }
+
+    // Parse method cannot parse GIDs with null GUIDs (a bug probably)
+    private GlobalObjectId ConstructGid(
+        int identifierType, string assetGUID, ulong targetObjecId, ulong targetPrefabId)
+    {
+        string newGidString = $"GlobalObjectId_V1-{identifierType}-{assetGUID}-{targetObjecId}-{targetPrefabId}";
+        GlobalObjectId.TryParse(newGidString, out GlobalObjectId newGid);
+        return newGid;
     }
 }

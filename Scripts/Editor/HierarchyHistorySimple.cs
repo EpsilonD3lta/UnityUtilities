@@ -16,14 +16,14 @@ public class HierarchyHistorySimple : AssetsHistory
     protected override void OnEnable()
     {
         // This is received even if invisible
-        Selection.selectionChanged -= SelectionChange;
-        Selection.selectionChanged += SelectionChange;
+        Selection.selectionChanged -= SelectionChanged;
+        Selection.selectionChanged += SelectionChanged;
         wantsMouseEnterLeaveWindow = true;
         wantsMouseMove = true;
 
         LimitAndOrderHistory();
     }
-    protected override void SelectionChange()
+    protected override void SelectionChanged()
     {
         foreach (var t in Selection.transforms)
         {
