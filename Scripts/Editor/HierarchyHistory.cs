@@ -11,6 +11,7 @@ using UnityEditor.Experimental.SceneManagement; // Out of experimental in 2021.2
 #endif
 // TODO: optimize, don't save to editorprefs?, inactive gameobjects - change color of text
 // added gameobjects to prefabs - change icon at least?
+// OnHierarchyChange, check everything and add to scene/prefab history newly instantiated prefab history? - too much overhead?
 public class HierarchyHistory : AssetsHistory
 {
     protected override string prefId => PlayerSettings.companyName + "." +
@@ -68,10 +69,13 @@ public class HierarchyHistory : AssetsHistory
 
     protected override void Test()
     {
-        string k = null;
-        List<string> l = new List<string>() { null };
-        k = string.Join("|", l);
-        //Debug.Log(k == "");
+        var gos = FindObjectsOfType<Transform>(true);
+        var objs = GlobalObjectId.GlobalObjectIdentifierToObjectSlow(
+            ConvertToUnpackedGid(Parse(
+                "GlobalObjectId_V1-2-2fd19a05ecb802843bd51e0f33d4a32b-4983886930841126834-1308519948")));
+        Debug.Log(ConvertToUnpackedGid(Parse(
+                "GlobalObjectId_V1-2-2fd19a05ecb802843bd51e0f33d4a32b-4983886930841126834-1308519948")));
+        Debug.Log(objs, objs);
     }
 
     protected override void OnEnable()
@@ -164,7 +168,7 @@ public class HierarchyHistory : AssetsHistory
         {
             foreach (var gid in perObjectPinned[prefabGid])
             {
-                var obj = GlobalObjectIdentifiersToPrefabObjects(prefabChildren, gid);
+                var obj = GlobalObjectIdentifierToPrefabObject(prefabChildren, gid);
                 if (!obj) obj = GlobalObjectId.GlobalObjectIdentifierToObjectSlow(gid);
                 if (obj) AddToEnd(obj, pinned);
             }
@@ -173,7 +177,7 @@ public class HierarchyHistory : AssetsHistory
         {
             foreach (var gid in perObjectHistory[prefabGid])
             {
-                var obj = GlobalObjectIdentifiersToPrefabObjects(prefabChildren, gid);
+                var obj = GlobalObjectIdentifierToPrefabObject(prefabChildren, gid);
                 if (obj) AddToEnd(obj, history);
             }
         }
@@ -478,26 +482,6 @@ public class HierarchyHistory : AssetsHistory
         LimitAndOrderHistory();
     }
 
-    // The default method of GlobalObjectId does not work for some reason for objects in prefab stage
-    private Object GlobalObjectIdentifiersToPrefabObjects(Transform[] prefabChildren, GlobalObjectId gid)
-    {
-        foreach (var c in prefabChildren)
-        {
-            var childrenGid = GlobalObjectId.GetGlobalObjectIdSlow(c.gameObject);
-            if (ComparePrefabObjectInstance(childrenGid, gid))
-            {
-                return c.gameObject;
-            }
-        }
-        return null;
-    }
-
-    // Omits asset GUID. This is to sync prefab asset and prefab instances hierarchy history
-    private bool ComparePrefabObjectInstance(GlobalObjectId gid1, GlobalObjectId gid2)
-    {
-        return gid1.targetObjectId == gid2.targetObjectId && gid1.targetPrefabId == gid2.targetPrefabId;
-    }
-
     protected override void SaveHistoryToEditorPrefs()
     {
         //Debug.Log("custom save");
@@ -587,6 +571,45 @@ public class HierarchyHistory : AssetsHistory
         }
     }
 
+    #region Helpers
+
+    // The default method of GlobalObjectId does not work for some reason for objects in prefab stage
+    private Object GlobalObjectIdentifierToPrefabObject(Transform[] prefabChildren, GlobalObjectId gid)
+    {
+        foreach (var c in prefabChildren)
+        {
+            var childrenGid = GlobalObjectId.GetGlobalObjectIdSlow(c.gameObject);
+            if (ComparePrefabObjectInstance(childrenGid, gid))
+            {
+                return c.gameObject;
+            }
+        }
+        return null;
+    }
+
+    // Usable for instances in the scene to select all copies
+    private List<Object> GlobalObjectIdentifierToPrefabObjects(Transform[] prefabChildren, GlobalObjectId gid)
+    {
+        var objs = new List<Object>();
+        foreach (var c in prefabChildren)
+        {
+            var childrenGid = GlobalObjectId.GetGlobalObjectIdSlow(c.gameObject);
+            if (ComparePrefabObjectInstance(childrenGid, gid))
+            {
+                objs.Add(c.gameObject);
+            }
+        }
+        return objs;
+    }
+
+    // Omits asset GUID and targetPrefabId. This is to sync prefab asset and prefab instances hierarchy history.
+    // targetPrefabId is only assigned children of instances of prefabs in the scene, targetObjectId is the same everywhere.
+    // On playmode entered, targetPbjectId and targetPrefaId are added together (it's more complicated)
+    private bool ComparePrefabObjectInstance(GlobalObjectId gid1, GlobalObjectId gid2)
+    {
+        return gid1.targetObjectId == gid2.targetObjectId;
+    }
+
     private GlobalObjectId Parse(string gidString)
     {
         GlobalObjectId.TryParse(gidString, out GlobalObjectId gid);
@@ -598,7 +621,13 @@ public class HierarchyHistory : AssetsHistory
         int identifierType, string assetGUID, ulong targetObjecId, ulong targetPrefabId)
     {
         string newGidString = $"GlobalObjectId_V1-{identifierType}-{assetGUID}-{targetObjecId}-{targetPrefabId}";
-        GlobalObjectId.TryParse(newGidString, out GlobalObjectId newGid);
-        return newGid;
+        return Parse(newGidString);
     }
+
+    private GlobalObjectId ConvertToUnpackedGid(GlobalObjectId gid)
+    {
+        ulong unpackedTargetObjectId = (gid.targetObjectId ^ gid.targetPrefabId) & 0x7fffffffffffffff;
+        return ConstructGid(gid.identifierType, gid.assetGUID.ToString(), unpackedTargetObjectId, 0);
+    }
+    #endregion
 }

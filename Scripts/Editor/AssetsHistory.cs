@@ -479,6 +479,7 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
             history.Add(AssetDatabase.LoadMainAssetAtPath(path)); // Preserve order
     }
 
+    #region Drawing
     private void DrawObjectRow(Rect rect, int rowHeight, Object obj, bool hover, bool selected, bool pinned)
     {
         Color oldBackGroundColor = GUI.backgroundColor;
@@ -588,13 +589,15 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
             Styles.areStylesSet = true;
         }
     }
+    #endregion
 
+    #region Reflection
     private static void OpenPropertyEditor(Object obj)
     {
         string windowTypeName = "UnityEditor.PropertyEditor";
         var windowType = typeof(Editor).Assembly.GetType(windowTypeName);
         MethodInfo builderMethod = windowType.GetMethod("OpenPropertyEditor", BindingFlags.Static | BindingFlags.NonPublic);
-        builderMethod.Invoke(null, new object[] { obj , true});
+        builderMethod.Invoke(null, new object[] { obj, true });
     }
 
     [UnityEditor.ShortcutManagement.Shortcut("PropertyEditor/AssetsHistoryOpenMouseOver")]
@@ -635,7 +638,7 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
         var classType = typeof(EditorUtility);
         MethodInfo builderMethod =
             classType.GetMethod("DisplayObjectContextMenu", BindingFlags.Static | BindingFlags.NonPublic, null,
-            new Type[] { typeof(Rect), typeof(Object), typeof(int)}, null);
+            new Type[] { typeof(Rect), typeof(Object), typeof(int) }, null);
         builderMethod.Invoke(null, new object[] { rect, obj, 0 });
     }
 
@@ -664,7 +667,9 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
             pw.Repaint();
         }
     }
+    #endregion
 
+    #region Helpers
     private static int Mod(int x, int m)
     {
         return (x % m + m) % m; // Always positive modulus
@@ -700,6 +705,7 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
         main = null;
         return false;
     }
+    #endregion
 }
 
 public class AssetImportHistory : AssetPostprocessor
