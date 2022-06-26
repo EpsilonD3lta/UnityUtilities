@@ -34,7 +34,7 @@ public class HierarchyHistory : AssetsHistory
     [SerializeField]
     private List<StringList> perObjectPinnedValues = new List<StringList>();
 
-    [System.Serializable]
+    [Serializable]
     public class StringList
     {
         public List<string> list;
@@ -93,6 +93,8 @@ public class HierarchyHistory : AssetsHistory
         PrefabStage.prefabStageClosing += PrefabStageClosing;
         EditorSceneManager.sceneOpened -= SceneOpened;
         EditorSceneManager.sceneOpened += SceneOpened;
+        EditorApplication.playModeStateChanged -= PlayModeExitted;
+        EditorApplication.playModeStateChanged += PlayModeExitted;
         EditorApplication.quitting -= OnBeforeSerialize;
         EditorApplication.quitting += OnBeforeSerialize;
         EditorApplication.quitting -= SaveHistoryToEditorPrefs;
@@ -130,6 +132,16 @@ public class HierarchyHistory : AssetsHistory
     private void HierarchyChanged()
     {
         Repaint();
+    }
+
+    private void PlayModeExitted(PlayModeStateChange stateChange)
+    {
+        if (stateChange == PlayModeStateChange.EnteredEditMode)
+        {
+            LoadOpenScenesHistory();
+            LimitAndOrderHistory();
+            Repaint();
+        }
     }
 
     protected override void SceneOpened(Scene scene, OpenSceneMode mode)

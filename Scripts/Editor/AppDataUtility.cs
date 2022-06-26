@@ -10,19 +10,25 @@ public class AppDataUtility : EditorWindow
         Rect rect = new Rect(Screen.width / 2f, Screen.height / 2f, 220, 100);
         var window = GetWindow<AppDataUtility>(title: "AppData Utility");
         window.position = rect;
+        window.minSize = new Vector2(100, 40);
         window.Show();
     }
 
     private void OnGUI()
     {
         Event ev = Event.current;
-        GUILayout.Label("AppData Path (Application.persistentDataPath)", EditorStyles.boldLabel);
-        GUILayout.TextField(Application.persistentDataPath);
         GUILayout.BeginHorizontal();
         if (GUILayout.Button("Show Folder"))
         {
             EditorUtility.RevealInFinder(Application.persistentDataPath);
         }
+        GUIContent label = new GUIContent("AppData Path:", "Application.persistentDataPath");
+        GUILayout.Label(label, EditorStyles.boldLabel);
+        GUILayout.TextField(Application.persistentDataPath);
+
+        GUILayout.EndHorizontal();
+        GUILayout.BeginHorizontal();
+
         if (GUILayout.Button("Delete Contents"))
         {
             if (ev.modifiers == EventModifiers.Shift ||
@@ -37,9 +43,7 @@ public class AppDataUtility : EditorWindow
                 Debug.LogWarning("AppData Utility: All folder contents were deleted.");
             }
         }
-        GUILayout.EndHorizontal();
 
-        GUILayout.Label("PlayerPrefs", EditorStyles.boldLabel);
         if (GUILayout.Button("Delete all PlayerPrefs"))
         {
             if (ev.modifiers == EventModifiers.Shift ||
@@ -49,5 +53,6 @@ public class AppDataUtility : EditorWindow
                 Debug.LogWarning("AppData Utility: All PlayerPrefs were deleted.");
             }
         }
+        GUILayout.EndHorizontal();
     }
 }
