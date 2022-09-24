@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
@@ -20,7 +21,17 @@ public class AppDataUtility : EditorWindow
         GUILayout.BeginHorizontal();
         if (GUILayout.Button("Show Folder"))
         {
-            EditorUtility.RevealInFinder(Application.persistentDataPath);
+            string assetPath = Application.persistentDataPath;
+            assetPath = "\"" + assetPath + "\"";
+            assetPath = assetPath.Replace('/', '\\');
+            ProcessStartInfo process = new ProcessStartInfo("explorer.exe", assetPath)
+            {
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+                UseShellExecute = false
+            };
+            Process.Start(process);
         }
         GUIContent label = new GUIContent("AppData Path:", "Application.persistentDataPath");
         GUILayout.Label(label, EditorStyles.boldLabel);
@@ -40,7 +51,7 @@ public class AppDataUtility : EditorWindow
                     file.Delete();
                 foreach (var dir in directoryInfo.GetDirectories())
                     dir.Delete(true);
-                Debug.LogWarning("AppData Utility: All folder contents were deleted.");
+                UnityEngine.Debug.LogWarning("AppData Utility: All folder contents were deleted.");
             }
         }
 
@@ -50,7 +61,7 @@ public class AppDataUtility : EditorWindow
                 EditorUtility.DisplayDialog("AppData Utility", "Delete all PlayerPrefs? This cannot be undone.", "Yes", "Cancel"))
             {
                 PlayerPrefs.DeleteAll();
-                Debug.LogWarning("AppData Utility: All PlayerPrefs were deleted.");
+                UnityEngine.Debug.LogWarning("AppData Utility: All PlayerPrefs were deleted.");
             }
         }
         GUILayout.EndHorizontal();
