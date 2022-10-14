@@ -59,6 +59,7 @@ public class HierarchyHistory : AssetsHistory
     {
         base.AddItemsToMenu(menu);
         menu.AddItem(EditorGUIUtility.TrTextContent("Clear All for All Objects"), false, ClearAllForAllObjects);
+        menu.AddItem(EditorGUIUtility.TrTextContent("List all objects"), false, ListAllObjects);
     }
 
     protected override void Awake()
@@ -76,6 +77,18 @@ public class HierarchyHistory : AssetsHistory
         Debug.Log(ConvertToUnpackedGid(Parse(
                 "GlobalObjectId_V1-2-2fd19a05ecb802843bd51e0f33d4a32b-4983886930841126834-1308519948")));
         Debug.Log(objs, objs);
+    }
+
+    protected void ListAllObjects()
+    {
+        foreach (var obj in perObjectHistory)
+        {
+            Debug.Log("History Key: " + obj.Key + "\nValues:\n " + string.Join("\n", obj.Value));
+        }
+        foreach (var obj in perObjectPinned)
+        {
+            Debug.Log("Pinned Key: " + obj.Key + "\nValues:\n " + string.Join("\n", obj.Value));
+        }
     }
 
     protected override void OnEnable()
@@ -616,7 +629,7 @@ public class HierarchyHistory : AssetsHistory
 
     // Omits asset GUID and targetPrefabId. This is to sync prefab asset and prefab instances hierarchy history.
     // targetPrefabId is only assigned children of instances of prefabs in the scene, targetObjectId is the same everywhere.
-    // On playmode entered, targetPbjectId and targetPrefaId are added together (it's more complicated)
+    // On playmode entered, targetObjectId and targetPrefaId are added together (it's more complicated)
     private bool ComparePrefabObjectInstance(GlobalObjectId gid1, GlobalObjectId gid2)
     {
         return gid1.targetObjectId == gid2.targetObjectId;
