@@ -54,12 +54,13 @@ namespace UnityEngine.UI.Extensions
         [MenuItem("Assets/Propagate Name/Also remove numbering", true)]
         static bool PropagateNameValidation()
         {
+            if (Selection.assetGUIDs.Length == 0) return false;
             string guid = Selection.assetGUIDs[0];
             string path = AssetDatabase.GUIDToAssetPath(guid);
             GameObject selectedPrefabAsset = AssetDatabase.LoadAssetAtPath<GameObject>(path);
             bool valid = false;
-            if (selectedPrefabAsset == null) valid = false;
-            valid = PrefabUtility.IsAnyPrefabInstanceRoot(selectedPrefabAsset);
+            valid = PrefabUtility.IsPartOfPrefabAsset(selectedPrefabAsset);
+            if (!valid) valid = PrefabUtility.IsAnyPrefabInstanceRoot(selectedPrefabAsset);
             if (!valid) valid = PrefabUtility.IsPartOfModelPrefab(selectedPrefabAsset);
             return valid;
         }
