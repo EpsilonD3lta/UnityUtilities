@@ -1,3 +1,4 @@
+using System;
 using TMPro;
 #if UNITY_EDITOR
 using UnityEditor.Experimental.SceneManagement;
@@ -90,9 +91,9 @@ public class TMProWarpText : MonoBehaviour
 
         TMP_TextInfo textInfo = text.textInfo;
         if (textInfo == null) return;
-        int characterCount = textInfo.characterCount;
+        int characterCount = textInfo.characterInfo.Length;
 
-        if (characterCount == 0) return;
+        if (characterCount == 0 || textInfo.characterCount == 0) return;
 
         float boundsMinX = text.bounds.min.x;
         float boundsMaxX = text.bounds.max.x;

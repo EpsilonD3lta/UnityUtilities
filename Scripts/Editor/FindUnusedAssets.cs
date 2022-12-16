@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -74,7 +76,8 @@ public class FindUnusedAssets : EditorWindow
                 continue;
             }
 
-            if (EditorUtility.DisplayCancelableProgressBar("Searching...", "Looking for asset references", progress))
+            if (EditorUtility.DisplayCancelableProgressBar("Searching...",
+                $"Looking for asset: {assetPath} references", progress))
             {
                 canceled = true;
                 return true;
@@ -94,7 +97,7 @@ public class FindUnusedAssets : EditorWindow
         window.Show();
         canceled = false;
 
-        if (EditorUtility.DisplayCancelableProgressBar("Searching...", "Searching for asset references", 0))
+        if (EditorUtility.DisplayCancelableProgressBar("Searching...", "Loading assetpaths", 0))
         {
             canceled = true;
             EditorUtility.ClearProgressBar();
@@ -140,7 +143,7 @@ public class FindUnusedAssets : EditorWindow
             current++;
             progress = current / (float)total;
 
-            if (canceled || EditorUtility.DisplayCancelableProgressBar("Searching...", "Looking for asset references", progress))
+            if (canceled || EditorUtility.DisplayCancelableProgressBar("Searching...", $"Canceled", progress))
             {
                 EditorUtility.ClearProgressBar();
                 return;
