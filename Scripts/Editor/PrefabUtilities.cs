@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -58,6 +59,7 @@ namespace UnityEngine.UI.Extensions
             string guid = Selection.assetGUIDs[0];
             string path = AssetDatabase.GUIDToAssetPath(guid);
             GameObject selectedPrefabAsset = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (selectedPrefabAsset == null) return false;
             bool valid = false;
             valid = PrefabUtility.IsPartOfPrefabAsset(selectedPrefabAsset);
             if (!valid) valid = PrefabUtility.IsAnyPrefabInstanceRoot(selectedPrefabAsset);
