@@ -35,7 +35,8 @@ public class FileUtilities : Editor
         }
     }
 
-    private static string VisualStudioPath = "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/devenv.exe";
+    private static string VisualStudio2019Path = "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/devenv.exe";
+    private static string VisualStudio2022Path = "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/devenv.exe";
 
     [MenuItem("Assets/File/Open as Textfile")]
     public static void OpenAsTextfile()
@@ -48,7 +49,7 @@ public class FileUtilities : Editor
 
     public static void OpenAsTextfile(string path)
     {
-        ProcessStartInfo process = new ProcessStartInfo(VisualStudioPath, "/edit \"" + path + "\"")
+        ProcessStartInfo process = new ProcessStartInfo(VisualStudio2022Path, "/edit \"" + path + "\"")
         {
             RedirectStandardOutput = true,
             RedirectStandardError = true,
@@ -69,7 +70,7 @@ public class FileUtilities : Editor
 
     public static void OpenMetafile(string path)
     {
-        ProcessStartInfo process = new ProcessStartInfo(VisualStudioPath, "/edit \"" + path + ".meta\"")
+        ProcessStartInfo process = new ProcessStartInfo(VisualStudio2022Path, "/edit \"" + path + ".meta\"")
         {
             RedirectStandardOutput = true,
             RedirectStandardError = true,
