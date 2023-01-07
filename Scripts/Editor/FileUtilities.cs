@@ -1,3 +1,6 @@
+using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -7,6 +10,9 @@ using UnityEditor;
 using UnityEditor.Callbacks;
 using UnityEditorInternal;
 using UnityEngine;
+using Object = UnityEngine.Object;
+using Debug = UnityEngine.Debug;
+using System.Runtime.Serialization;
 
 // Menu item shortcuts: % == ctrl, # == shift, & == alt, _ == no modifier, LEFT, RIGHT, UP, DOWN, F1..F12, HOME, END, PGUP, PGDN
 public class FileUtilities : Editor
@@ -31,12 +37,12 @@ public class FileUtilities : Editor
         {
             string guid = Selection.assetGUIDs[0];
             GUIUtility.systemCopyBuffer = guid;
-            UnityEngine.Debug.Log($"{AssetDatabase.GUIDToAssetPath(guid)} GUID copied to clipboard: {guid}");
+            Debug.Log($"{AssetDatabase.GUIDToAssetPath(guid)} GUID copied to clipboard: {guid}");
         }
     }
 
-    private static string VisualStudio2019Path = "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/devenv.exe";
-    private static string VisualStudio2022Path = "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/devenv.exe";
+    //private static string VisualStudio2019Path = "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/devenv.exe";
+    private static string VisualStudioPath = "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/devenv.exe";
 
     [MenuItem("Assets/File/Open as Textfile")]
     public static void OpenAsTextfile()
@@ -49,7 +55,7 @@ public class FileUtilities : Editor
 
     public static void OpenAsTextfile(string path)
     {
-        ProcessStartInfo process = new ProcessStartInfo(VisualStudio2022Path, "/edit \"" + path + "\"")
+        ProcessStartInfo process = new ProcessStartInfo(VisualStudioPath, "/edit \"" + path + "\"")
         {
             RedirectStandardOutput = true,
             RedirectStandardError = true,
@@ -70,7 +76,7 @@ public class FileUtilities : Editor
 
     public static void OpenMetafile(string path)
     {
-        ProcessStartInfo process = new ProcessStartInfo(VisualStudio2022Path, "/edit \"" + path + ".meta\"")
+        ProcessStartInfo process = new ProcessStartInfo(VisualStudioPath, "/edit \"" + path + ".meta\"")
         {
             RedirectStandardOutput = true,
             RedirectStandardError = true,
@@ -78,6 +84,18 @@ public class FileUtilities : Editor
             UseShellExecute = false
         };
         Process.Start(process);
+    }
+
+    [MenuItem("Assets/File/Serialize Class")]
+    public static void SerializeClass()
+    {
+        if (Selection.assetGUIDs.Length == 0) return;
+        var path = AssetDatabase.GUIDToAssetPath(Selection.assetGUIDs[0]);
+        var loadedScript = AssetDatabase.LoadAssetAtPath<MonoScript>(path);
+        if (loadedScript == null) return;
+        var type = loadedScript.GetClass();
+        var instance = FormatterServices.GetUninitializedObject(type);
+        Debug.Log(JsonConvert.SerializeObject(instance));
     }
 
     private static string GExtensionsPath = "C:/Program Files (x86)/GitExtensions/GitExtensions.exe";
@@ -90,7 +108,7 @@ public class FileUtilities : Editor
             string path = AssetDatabase.GUIDToAssetPath(guid);
             // Remove "Assets" at the end of Application.dataPath, because asset contains Assets or Packages at the beginning
             path = Application.dataPath.Substring(0, Application.dataPath.Length - 6) + path;
-            UnityEngine.Debug.Log(path);
+            Debug.Log(path);
             FileHistoryGitExtensions(path);
         }
     }
@@ -103,7 +121,7 @@ public class FileUtilities : Editor
             string path = AssetDatabase.GUIDToAssetPath(guid);
             // Remove "Assets" at the end of Application.dataPath, because asset contains Assets or Packages at the beginning
             path = Application.dataPath.Substring(0, Application.dataPath.Length - 6) + path + ".meta";
-            UnityEngine.Debug.Log(path);
+            Debug.Log(path);
             FileHistoryGitExtensions(path);
         }
     }
@@ -279,7 +297,7 @@ public class FileUtilities : Editor
     {
         Object asset = EditorUtility.InstanceIDToObject(instanceID);
         string assetPath = AssetDatabase.GetAssetPath(asset);
-        if (assetPath.EndsWith(".fbx", System.StringComparison.OrdinalIgnoreCase))
+        if (assetPath.EndsWith(".fbx", StringComparison.OrdinalIgnoreCase))
         {
             OpenFBXInBlender(assetPath);
             return true;
