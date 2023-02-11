@@ -596,7 +596,12 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
     {
         string windowTypeName = "UnityEditor.PropertyEditor";
         var windowType = typeof(Editor).Assembly.GetType(windowTypeName);
-        MethodInfo builderMethod = windowType.GetMethod("OpenPropertyEditor", BindingFlags.Static | BindingFlags.NonPublic);
+        MethodInfo builderMethod = windowType.GetMethod("OpenPropertyEditor",
+            BindingFlags.Static | BindingFlags.NonPublic,
+            null,
+            new Type[] { typeof(Object), typeof(bool) },
+            null
+            );
         builderMethod.Invoke(null, new object[] { obj, true });
     }
 
@@ -614,7 +619,8 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
         }
         string windowTypeName = "UnityEditor.PropertyEditor";
         var windowType = typeof(Editor).Assembly.GetType(windowTypeName);
-        MethodInfo builderMethod = windowType.GetMethod("OpenHoveredItemPropertyEditor", BindingFlags.Static | BindingFlags.NonPublic);
+        MethodInfo builderMethod = windowType.GetMethod("OpenHoveredItemPropertyEditor",
+            BindingFlags.Static | BindingFlags.NonPublic);
         builderMethod.Invoke(null, new object[] { null });
     }
 
@@ -628,7 +634,8 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
 
         string hierarchyTypeName = "UnityEditor.SceneHierarchy";
         var hierarchyType = typeof(Editor).Assembly.GetType(hierarchyTypeName);
-        MethodInfo builderMethod = hierarchyType.GetMethod("ItemContextClick", BindingFlags.Instance | BindingFlags.NonPublic);
+        MethodInfo builderMethod = hierarchyType.GetMethod("ItemContextClick",
+            BindingFlags.Instance | BindingFlags.NonPublic);
         builderMethod.Invoke(sceneHierarchy, new object[] { itemID });
     }
 
