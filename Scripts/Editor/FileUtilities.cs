@@ -98,6 +98,23 @@ public class FileUtilities : Editor
         Debug.Log(JsonConvert.SerializeObject(instance));
     }
 
+    [MenuItem("Editor/Open Editor Log")]
+    public static void OpenEditorLog()
+    {
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        string VSCodePath = localAppData + "/Programs/Microsoft VS Code/Code.exe";
+        Debug.Log("/edit \"" + localAppData + "/Unity/Editor.log\"");
+        ProcessStartInfo process = new ProcessStartInfo(
+            VSCodePath, "/edit \"" + localAppData + "/Unity/Editor/Editor.log\"")
+        {
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true,
+            UseShellExecute = false
+        };
+        Process.Start(process);
+    }
+
     private static string GExtensionsPath = "C:/Program Files (x86)/GitExtensions/GitExtensions.exe";
 
     [MenuItem("Assets/File/File History GE  %&h")]
