@@ -1,14 +1,15 @@
 using System;
+using System.Diagnostics;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
 /// <summary>
 /// Reroute UnityEngine.Logger through this custom logger
-/// Use at the beginning of game: Debug.unityLogger.logHandler = new CustomLogger();
+/// Use at the beginning of game: Debug.unityLogger.logHandler = new CustomLogger("MyTag");
 /// </summary>
 public class CustomLogger : ILogHandler
 {
-    private const string defaultTag = "[XXX]";
+    private string defaultTag = "[XXX]";
 
     public ILogHandler logHandler
     {
@@ -16,8 +17,9 @@ public class CustomLogger : ILogHandler
         set;
     }
 
-    public CustomLogger()
+    public CustomLogger(string defaultTag)
     {
+        this.defaultTag = defaultTag;
         this.logHandler = Debug.unityLogger.logHandler;
     }
 
