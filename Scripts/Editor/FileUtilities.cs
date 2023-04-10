@@ -103,9 +103,9 @@ public class FileUtilities : Editor
     {
         var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         string VSCodePath = localAppData + "/Programs/Microsoft VS Code/Code.exe";
-        Debug.Log("/edit \"" + localAppData + "/Unity/Editor.log\"");
+        Debug.Log(VSCodePath + " \"" + localAppData + "/Unity/Editor.log\"");
         ProcessStartInfo process = new ProcessStartInfo(
-            VSCodePath, "/edit \"" + localAppData + "/Unity/Editor/Editor.log\"")
+            VSCodePath, " \"" + localAppData + "/Unity/Editor/Editor.log\"")
         {
             RedirectStandardOutput = true,
             RedirectStandardError = true,
