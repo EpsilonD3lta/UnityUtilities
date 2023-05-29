@@ -1,6 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.EventSystems;
 
 /// <summary>
@@ -22,6 +24,11 @@ public class TMProUGUIHyperlinks : MonoBehaviour, IPointerDownHandler, IPointerU
     private Color32 usedHoveredColor = new Color32(0xFD, 0x5E, 0xFD, 0xFF);
     [SerializeField]
     private Color32 usedPressedColor = new Color32(0xCF, 0x00, 0xCF, 0xFF);
+    [SerializeField]
+    private LinkEvent linkEvent;
+
+    [Serializable]
+    public class LinkEvent : UnityEvent<string> { }
 
     private List<Color32[]> startColors = new List<Color32[]>();
     private TextMeshProUGUI textMeshPro;
@@ -71,7 +78,9 @@ public class TMProUGUIHyperlinks : MonoBehaviour, IPointerDownHandler, IPointerU
             SetLinkColor(linkIndex, usedHoveredColor);
             startColors.ForEach(c => c[0] = c[1] = c[2] = c[3] = usedColor);
             usedLinks[linkIndex] = true;
-            Application.OpenURL(linkInfo.GetLinkID());
+            if (linkEvent == null)
+                Application.OpenURL(linkInfo.GetLinkID());
+            else linkEvent.Invoke(linkInfo.GetLinkID());
         }
         pressedLinkIndex = -1;
     }
