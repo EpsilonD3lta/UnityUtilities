@@ -23,8 +23,9 @@ if not blender280:
             raise
 
 # Find the Blender output file
-import os
-outfile = os.getenv("UNITY_BLENDER_EXPORTER_OUTPUT_FILE")
+import sys
+argv = sys.argv
+outfile = ' '.join(argv[argv.index("--") + 1:])
 
 # Do the conversion
 print("Starting blender to FBX conversion " + outfile)
@@ -36,14 +37,19 @@ if blender280:
         use_selection=False,
         use_active_collection=False,
         # Custom code (maybe will not work with animated objects)
-        bake_space_transform=True,
-        axis_forward = 'Z',
-        axis_up = 'Y',
+        bake_space_transform=False,
+        use_space_transform=False,
+        axis_forward = 'Y',
+        axis_up = 'Z',
+        apply_unit_scale=True,
+        global_scale=1.0,
+        object_types= {'MESH'},
         # End of custom code
-        object_types= {'ARMATURE','CAMERA','LIGHT','MESH','EMPTY'},
         use_mesh_modifiers=True,
         mesh_smooth_type='OFF',
         use_custom_props=True,
+        bake_anim_use_nla_strips=False,
+        bake_anim_use_all_actions=False,
         apply_scale_options='FBX_SCALE_ALL')
 elif blender249:
     mtx4_x90n = Blender.Mathutils.RotationMatrix(-90, 4, 'x')
