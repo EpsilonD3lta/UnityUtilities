@@ -8,7 +8,7 @@ public class AppDataUtility : EditorWindow
     [MenuItem("Tools/AppData Utility")]
     public static void ShowWindow()
     {
-        Rect rect = new Rect(Screen.width / 2f, Screen.height / 2f, 220, 100);
+        Rect rect = new Rect(Screen.width / 2f, Screen.height / 2f, 220, 40);
         var window = GetWindow<AppDataUtility>(title: "AppData Utility");
         window.position = rect;
         window.minSize = new Vector2(100, 40);
@@ -19,6 +19,9 @@ public class AppDataUtility : EditorWindow
     {
         Event ev = Event.current;
         GUILayout.BeginHorizontal();
+#if UNITY_EDITOR_OSX
+        EditorUtility.RevealInFinder(Application.persistentDataPath);
+#else
         if (GUILayout.Button("Show Folder"))
         {
             string assetPath = Application.persistentDataPath;
@@ -33,6 +36,7 @@ public class AppDataUtility : EditorWindow
             };
             Process.Start(process);
         }
+#endif
         GUIContent label = new GUIContent("AppData Path:", "Application.persistentDataPath");
         GUILayout.Label(label, EditorStyles.boldLabel);
         GUILayout.TextField(Application.persistentDataPath);

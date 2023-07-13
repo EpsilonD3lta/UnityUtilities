@@ -406,12 +406,18 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
 
     protected virtual void RemoveAllPinned(Predicate<Object> predicate)
     {
-        pinned.RemoveAll(predicate);
+        foreach (var obj in pinned.Where(x => predicate(x)).ToList())
+        {
+            RemovePinned(obj);
+        }
     }
 
     protected virtual void RemoveAllHistory(Predicate<Object> predicate)
     {
-        history.RemoveAll(predicate);
+        foreach (var obj in history.Where(x => predicate(x)).ToList())
+        {
+            RemoveHistory(obj);
+        }
     }
 
     protected void AddToFront<T>(T obj, List<T> list, int limit = -1)
