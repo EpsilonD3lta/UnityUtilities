@@ -22,7 +22,7 @@ public class RectToolRounding
 
     public static void OnSceneGui(SceneView sceneView)
     {
-        if (!snappingOn) return;
+        if (!snappingOn || Application.isPlaying) return;
         if (Selection.transforms.Length == 1 && Selection.transforms[0] is RectTransform r)
         {
             // MouseDrag triggers when RectTool is dragged, but not when anchors are dragged
