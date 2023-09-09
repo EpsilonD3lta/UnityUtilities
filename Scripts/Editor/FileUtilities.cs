@@ -41,6 +41,22 @@ public class FileUtilities : Editor
         }
     }
 
+    [MenuItem("Assets/Mark Assets Dirty", priority = 38)]
+    public static void MarkDirty()
+    {
+        foreach (var obj in Selection.objects)
+        {
+            EditorUtility.SetDirty(obj);
+        }
+    }
+
+    [MenuItem("Assets/Force Reserialize", priority = 39)]
+    public static void ForceReserialize()
+    {
+        var assetPaths = Selection.assetGUIDs.ToList().Select(x => AssetDatabase.GUIDToAssetPath(x));
+        AssetDatabase.ForceReserializeAssets(assetPaths);
+    }
+
     //private static string VisualStudio2019Path = "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/devenv.exe";
     private static string VisualStudioPath = "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/devenv.exe";
 
