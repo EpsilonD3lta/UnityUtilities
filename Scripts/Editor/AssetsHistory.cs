@@ -461,7 +461,9 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
         RemoveAllPinned(x => x == null);
         int onlyPinned = pinned.Where(x => !history.Contains(x)).Count();
         int historyLimit = limit - onlyPinned;
-        if (history.Count > historyLimit) history = history.Take(historyLimit).ToList();
+        if (history.Count > historyLimit)
+            RemoveAllHistory(x => history.IndexOf(x) >= historyLimit);
+            //history = history.Take(historyLimit).ToList();
         groupedHistory = history.Where(x => !pinned.Contains(x)).OrderBy(x => x.GetType().Name).ThenBy(x => x.name).
             ThenBy(x => x.GetInstanceID()).ToList();
         groupedHistory.InsertRange(0, pinned);

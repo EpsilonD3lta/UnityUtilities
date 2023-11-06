@@ -191,19 +191,33 @@ public class HierarchyHistory : AssetsHistory
         var prefabChildren = prefabRoot.GetComponentsInChildren<Transform>(true);
         if (perObjectPinned.ContainsKey(prefabGid))
         {
+            var toRemove = new List<GlobalObjectId>();
             foreach (var gid in perObjectPinned[prefabGid])
             {
                 var obj = GlobalObjectIdentifierToPrefabObject(prefabChildren, gid);
                 if (!obj) obj = GlobalObjectId.GlobalObjectIdentifierToObjectSlow(gid);
                 if (obj) AddToEnd(obj, pinned);
+                else toRemove.Add(gid);
+            }
+            foreach (var gid in toRemove)
+            {
+                perObjectPinned[prefabGid].Remove(gid);
+                EditorPrefs.DeleteKey(prefId + nameof(perObjectPinnedValues) + gid);
             }
         }
         if (perObjectHistory.ContainsKey(prefabGid))
         {
+            var toRemove = new List<GlobalObjectId>();
             foreach (var gid in perObjectHistory[prefabGid])
             {
                 var obj = GlobalObjectIdentifierToPrefabObject(prefabChildren, gid);
                 if (obj) AddToEnd(obj, history);
+                else toRemove.Add(gid);
+            }
+            foreach (var gid in toRemove)
+            {
+                perObjectHistory[prefabGid].Remove(gid);
+                EditorPrefs.DeleteKey(prefId + nameof(perObjectHistoryValues) + gid);
             }
         }
     }
@@ -228,18 +242,32 @@ public class HierarchyHistory : AssetsHistory
         AssetDatabase.LoadAssetAtPath<SceneAsset>(scene.path));
         if (perObjectPinned.ContainsKey(sceneGid))
         {
+            var toRemove = new List<GlobalObjectId>();
             foreach (var gid in perObjectPinned[sceneGid])
             {
                 var obj = GlobalObjectId.GlobalObjectIdentifierToObjectSlow(gid);
                 if (obj) AddToEnd(obj, pinned);
+                else toRemove.Add(gid);
+            }
+            foreach (var gid in toRemove)
+            {
+                perObjectPinned[sceneGid].Remove(gid);
+                EditorPrefs.DeleteKey(prefId + nameof(perObjectPinnedValues) + gid);
             }
         }
         if (perObjectHistory.ContainsKey(sceneGid))
         {
+            var toRemove = new List<GlobalObjectId>();
             foreach (var gid in perObjectHistory[sceneGid])
             {
                 var obj = GlobalObjectId.GlobalObjectIdentifierToObjectSlow(gid);
                 if (obj) AddToEnd(obj, history);
+                else toRemove.Add(gid);
+            }
+            foreach (var gid in toRemove)
+            {
+                perObjectHistory[sceneGid].Remove(gid);
+                EditorPrefs.DeleteKey(prefId + nameof(perObjectHistoryValues) + gid);
             }
         }
     }
