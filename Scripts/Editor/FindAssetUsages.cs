@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using UnityEditor;
+using UnityEditor.PackageManager.UI;
 using UnityEngine;
 
 // Adapted from script by Michal Ferko:
@@ -57,8 +58,15 @@ public class FindAssetUsages : EditorWindow
         {
             Debug.Log("Finding asset usages no multiple assets support - only the first asset references will be found");
         }
+        string guid = assetGuids[0];
 
-        window.assets = new List<string>(); // Empty old results
+        window.FindAssetUsage(guid);
+    }
+
+    public void FindAssetUsage(string guid)
+    {
+        assetGUID = guid;
+        assets = new List<string>(); // Empty old results
 
         var references = new List<string>();
 
@@ -72,7 +80,6 @@ public class FindAssetUsages : EditorWindow
         int total = otherFilesPaths.Count;
         int current = 0;
 
-        string guid = assetGuids[0];
         string assetPath = AssetDatabase.GUIDToAssetPath(guid).Replace("/", "\\");
         string assetFilePath = projectPath + "\\" + assetPath;
         string assetMetaFilePath = assetFilePath + ".meta";
@@ -87,7 +94,7 @@ public class FindAssetUsages : EditorWindow
             }
             if (EditorUtility.DisplayCancelableProgressBar("Searching...", "Searching for asset references", current / (float)total))
             {
-                window.canceled = true;
+                canceled = true;
                 EditorUtility.ClearProgressBar();
                 return;
             }
@@ -101,11 +108,9 @@ public class FindAssetUsages : EditorWindow
                 references.Add(otherFileAssetPath);   // Not referencing self, add ref
             }
         }
-
         EditorUtility.ClearProgressBar();
 
-        window.assets = references;
-        window.assetGUID = guid;
+        assets = references;
     }
 
     private Vector2 scroll = Vector2.zero;
@@ -132,7 +137,15 @@ public class FindAssetUsages : EditorWindow
         }
 
         EditorGUILayout.LabelField(searchedAssetFilename);
+        GUILayout.BeginHorizontal();
         EditorGUILayout.ObjectField(searchedAsset, searchedAsset.GetType(), true);
+        GUIContent searchContent = EditorGUIUtility.IconContent("Search Icon");
+        if (GUILayout.Button(searchContent, GUILayout.MaxWidth(40), GUILayout.MaxHeight(18)))
+        {
+            if (!string.IsNullOrEmpty(assetGUID))
+                FindAssetUsage(assetGUID);
+        }
+        GUILayout.EndHorizontal();
         EditorGUILayout.Space();
         GUILayout.Label("Found Asset References", EditorStyles.boldLabel);
         EditorGUILayout.Space();
