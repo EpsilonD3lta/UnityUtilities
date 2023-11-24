@@ -1,5 +1,5 @@
-﻿
-using System;
+﻿using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -10,7 +10,7 @@ using UnityEngine.SceneManagement;
 public class FindMissingScripts : EditorWindow
 {
     string folderPath = "";
-    [MenuItem("Tools/Find Missing Scripts")]
+    [MenuItem("Tools/Find Missing Scripts/Find")]
     public static void FindMissingScriptsShow()
     {
         EditorWindow.GetWindow(typeof(FindMissingScripts));
@@ -61,7 +61,7 @@ public class FindMissingScripts : EditorWindow
             EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
 
             EditorUtility.UnloadUnusedAssetsImmediate(true);
-            GC.Collect();
+            System.GC.Collect();
 
             EditorUtility.ClearProgressBar();
         }
@@ -132,6 +132,86 @@ public class FindMissingScripts : EditorWindow
         foreach (Transform child in go.transform)
         {
             FindInGO(child.gameObject, prefabName);
+        }
+    }
+
+    [MenuItem("Tools/Find Missing Scripts/Remove Missing Scripts Recursively")]
+    private static void FindAndRemoveMissingInSelected()
+    {
+        var deepSelection = EditorUtility.CollectDeepHierarchy(Selection.gameObjects);
+        int compCount = 0;
+        int goCount = 0;
+        foreach (var o in deepSelection)
+        {
+            if (o is GameObject go)
+            {
+                int count = GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(go);
+                if (count > 0)
+                {
+                    // Edit: use undo record object, since undo destroy wont work with missing
+                    Undo.RegisterCompleteObjectUndo(go, "Remove missing scripts");
+                    GameObjectUtility.RemoveMonoBehavioursWithMissingScript(go);
+                    compCount += count;
+                    goCount++;
+                }
+            }
+        }
+        Debug.Log($"Found and removed {compCount} missing scripts from {goCount} GameObjects");
+    }
+
+    [MenuItem("Tools/Find Missing Scripts/Remove Missing Scripts Recursively Visit Prefabs")]
+    private static void FindAndRemoveMissingEverywhere()
+    {
+        // EditorUtility.CollectDeepHierarchy does not include inactive children
+        var deeperSelection = Selection.gameObjects.SelectMany(go => go.GetComponentsInChildren<Transform>(true))
+                .Select(t => t.gameObject);
+        var prefabs = new HashSet<Object>();
+        int compCount = 0;
+        int goCount = 0;
+        foreach (var go in deeperSelection)
+        {
+            int count = GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(go);
+            if (count > 0)
+            {
+                if (PrefabUtility.IsPartOfAnyPrefab(go))
+                {
+                    RecursivePrefabSource(go, prefabs, ref compCount, ref goCount);
+                    count = GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(go);
+                    // if count == 0 the missing scripts has been removed from prefabs
+                    if (count == 0)
+                        continue;
+                    // if not the missing scripts must be prefab overrides on this instance
+                }
+
+                Undo.RegisterCompleteObjectUndo(go, "Remove missing scripts");
+                GameObjectUtility.RemoveMonoBehavioursWithMissingScript(go);
+                compCount += count;
+                goCount++;
+            }
+        }
+
+        Debug.Log($"Found and removed {compCount} missing scripts from {goCount} GameObjects");
+    }
+
+    // Prefabs can both be nested or variants, so best way to clean all is to go through them all
+    // rather than jumping straight to the original prefab source.
+    private static void RecursivePrefabSource(GameObject instance, HashSet<Object> prefabs, ref int compCount,
+        ref int goCount)
+    {
+        var source = PrefabUtility.GetCorrespondingObjectFromSource(instance);
+        // Only visit if source is valid, and hasn't been visited before
+        if (source == null || !prefabs.Add(source))
+            return;
+
+        // Go deep before removing, to differentiate local overrides from missing in source
+        RecursivePrefabSource(source, prefabs, ref compCount, ref goCount);
+        int count = GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(source);
+        if (count > 0)
+        {
+            Undo.RegisterCompleteObjectUndo(source, "Remove missing scripts");
+            GameObjectUtility.RemoveMonoBehavioursWithMissingScript(source);
+            compCount += count;
+            goCount++;
         }
     }
 }
