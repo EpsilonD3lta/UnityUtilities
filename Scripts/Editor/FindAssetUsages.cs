@@ -28,13 +28,13 @@ public class FindAssetUsages : EditorWindow
         "cs.meta", "asmdef", "asmref",
     };
 
-    public List<string> assets = new List<string>();
-    public string assetGUID = null;
-
-    public bool canceled = false;
+    private List<string> assetPaths = new List<string>();
+    private string selectedAssetGUID = null;
+    private bool canceled = false;
+    private Vector2 scroll = Vector2.zero;
 
     [MenuItem("Assets/Find Asset Usage _#F12")]
-    public static void FindAssetUsage()
+    public static void CreateWindow()
     {
         var window = GetWindow<FindAssetUsages>();
         window.Show();
@@ -58,71 +58,19 @@ public class FindAssetUsages : EditorWindow
         {
             Debug.Log("Finding asset usages no multiple assets support - only the first asset references will be found");
         }
-        string guid = assetGuids[0];
 
-        window.FindAssetUsage(guid);
+        window.selectedAssetGUID = assetGuids[0];
+        window.assetPaths = FindAssetUsage(window.selectedAssetGUID, ref window.canceled);
     }
-
-    public void FindAssetUsage(string guid)
-    {
-        assetGUID = guid;
-        assets = new List<string>(); // Empty old results
-
-        var references = new List<string>();
-
-        string projectPath = Application.dataPath.Substring(0, Application.dataPath.Length - 7).Replace("/", "\\");
-        var otherFilesPaths = Directory.EnumerateFiles(projectPath + "\\Assets", "*", SearchOption.AllDirectories).ToList();
-        otherFilesPaths.AddRange(Directory.EnumerateFiles(projectPath + "\\ProjectSettings", "*", SearchOption.AllDirectories).ToList());
-        List<string> extensionsWithMeta = new List<string>(extensions);
-        extensionsWithMeta.AddRange(extensions.Select(x => x + ".meta"));
-        otherFilesPaths = otherFilesPaths.Where(x => Regex.IsMatch(x, $"\\.({string.Join("|", extensionsWithMeta)})$")).ToList();
-
-        int total = otherFilesPaths.Count;
-        int current = 0;
-
-        string assetPath = AssetDatabase.GUIDToAssetPath(guid).Replace("/", "\\");
-        string assetFilePath = projectPath + "\\" + assetPath;
-        string assetMetaFilePath = assetFilePath + ".meta";
-        Regex regex = new Regex(guid, RegexOptions.Compiled);
-
-        foreach (string otherFilePath in otherFilesPaths)
-        {
-            if (!File.Exists(otherFilePath))
-            {
-                Debug.LogWarning($"File does not exist, path too long? Path: {otherFilePath}");
-                continue;
-            }
-            if (EditorUtility.DisplayCancelableProgressBar("Searching...", "Searching for asset references", current / (float)total))
-            {
-                canceled = true;
-                EditorUtility.ClearProgressBar();
-                return;
-            }
-
-            current++;
-
-            if (regex.IsMatch(File.ReadAllText(otherFilePath)))
-            {
-                if (assetFilePath == otherFilePath || assetMetaFilePath == otherFilePath) continue;
-                string otherFileAssetPath = otherFilePath.Replace(projectPath + "\\", "").Replace("\\", "/");
-                references.Add(otherFileAssetPath);   // Not referencing self, add ref
-            }
-        }
-        EditorUtility.ClearProgressBar();
-
-        assets = references;
-    }
-
-    private Vector2 scroll = Vector2.zero;
 
     private void OnGUI()
     {
-        if (assetGUID == null)
+        if (selectedAssetGUID == null)
         {
             EditorGUILayout.LabelField("Right click on an Asset and select 'Find Asset Usages'");
             return;
         }
-        string searchedAssetFilename = AssetDatabase.GUIDToAssetPath(assetGUID);
+        string searchedAssetFilename = AssetDatabase.GUIDToAssetPath(selectedAssetGUID);
         if (searchedAssetFilename == null)
         {
             EditorGUILayout.LabelField("Right click on an Asset and select 'Find Asset Usages'");
@@ -142,8 +90,8 @@ public class FindAssetUsages : EditorWindow
         GUIContent searchContent = EditorGUIUtility.IconContent("Search Icon");
         if (GUILayout.Button(searchContent, GUILayout.MaxWidth(40), GUILayout.MaxHeight(18)))
         {
-            if (!string.IsNullOrEmpty(assetGUID))
-                FindAssetUsage(assetGUID);
+            if (!string.IsNullOrEmpty(selectedAssetGUID))
+                assetPaths = FindAssetUsage(selectedAssetGUID, ref canceled);
         }
         GUILayout.EndHorizontal();
         EditorGUILayout.Space();
@@ -151,11 +99,12 @@ public class FindAssetUsages : EditorWindow
         EditorGUILayout.Space();
 
         scroll = EditorGUILayout.BeginScrollView(scroll);
-        foreach (string assetFilename in assets)
+        foreach (string assetFilename in assetPaths)
         {
-            string fn = assetFilename.EndsWith(".meta") ? assetFilename.Substring(0, assetFilename.Length - 5) : assetFilename;
-            var asset = AssetDatabase.LoadAssetAtPath<Object>(fn);
-            EditorGUILayout.LabelField(fn);
+            string fileName = assetFilename.EndsWith(".meta") ?
+                assetFilename.Substring(0, assetFilename.Length - 5) : assetFilename;
+            var asset = AssetDatabase.LoadAssetAtPath<Object>(fileName);
+            EditorGUILayout.LabelField(fileName);
             if (asset != null)
             {
                 var type = asset.GetType();
@@ -164,5 +113,51 @@ public class FindAssetUsages : EditorWindow
             EditorGUILayout.Space();
         }
         EditorGUILayout.EndScrollView();
+    }
+
+    public static List<string> FindAssetUsage(string assetGuid, ref bool canceled)
+    {
+        var usedByAssetsPaths = new List<string>(); // Empty old results
+
+        string projectPath = Application.dataPath.Substring(0, Application.dataPath.Length - 7).Replace("/", "\\");
+        var otherFilesPaths = Directory.EnumerateFiles(projectPath + "\\Assets", "*", SearchOption.AllDirectories).ToList();
+        otherFilesPaths.AddRange(Directory.EnumerateFiles(projectPath + "\\ProjectSettings", "*", SearchOption.AllDirectories).ToList());
+        List<string> extensionsWithMeta = new List<string>(extensions);
+        extensionsWithMeta.AddRange(extensions.Select(x => x + ".meta"));
+        otherFilesPaths = otherFilesPaths.Where(x => Regex.IsMatch(x, $"\\.({string.Join("|", extensionsWithMeta)})$")).ToList();
+
+        int total = otherFilesPaths.Count;
+        int current = 0;
+
+        string assetPath = AssetDatabase.GUIDToAssetPath(assetGuid).Replace("/", "\\");
+        string assetFilePath = projectPath + "\\" + assetPath;
+        string assetMetaFilePath = assetFilePath + ".meta";
+        Regex regex = new Regex(assetGuid, RegexOptions.Compiled);
+
+        foreach (string otherFilePath in otherFilesPaths)
+        {
+            if (!File.Exists(otherFilePath))
+            {
+                Debug.LogWarning($"File does not exist, path too long? Path: {otherFilePath}");
+                continue;
+            }
+            if (EditorUtility.DisplayCancelableProgressBar("Searching...", "Searching for asset references", current / (float)total))
+            {
+                canceled = true;
+                EditorUtility.ClearProgressBar();
+                return usedByAssetsPaths;
+            }
+
+            current++;
+
+            if (regex.IsMatch(File.ReadAllText(otherFilePath)))
+            {
+                if (assetFilePath == otherFilePath || assetMetaFilePath == otherFilePath) continue;
+                string otherFileAssetPath = otherFilePath.Replace(projectPath + "\\", "").Replace("\\", "/");
+                usedByAssetsPaths.Add(otherFileAssetPath);   // Not referencing self, add ref
+            }
+        }
+        EditorUtility.ClearProgressBar();
+        return usedByAssetsPaths;
     }
 }
