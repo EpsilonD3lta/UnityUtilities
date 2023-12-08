@@ -127,8 +127,8 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
             if (isShortRectHover) isAnyShortRectHover = true;
             if (isHover) hoverObject = obj;
 
-            if (ev.type == EventType.Repaint) DrawObjectRow(fullRect, rowHeight, obj, isHover, isSelected, isPinned);
-            if (DrawPingButton(pingButtonRect, rowHeight, obj, isPinned)) shouldLimitAndOrderHistory = true;
+            if (ev.type == EventType.Repaint) DrawObjectRow(fullRect, obj, isHover, isSelected, isPinned);
+            if (DrawPingButton(pingButtonRect, obj, isPinned)) shouldLimitAndOrderHistory = true;
 
             if (isShortRectHover)
             {
@@ -488,12 +488,13 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
     }
 
     #region Drawing
-    private void DrawObjectRow(Rect rect, int rowHeight, Object obj, bool hover, bool selected, bool pinned)
+    private void DrawObjectRow(Rect rect, Object obj, bool hover, bool selected, bool pinned)
     {
+        int height = (int)rect.height;
         Color oldBackGroundColor = GUI.backgroundColor;
         Color oldColor = GUI.contentColor;
         Vector2 oldIconSize = EditorGUIUtility.GetIconSize();
-        EditorGUIUtility.SetIconSize(new Vector2(rowHeight, rowHeight));
+        EditorGUIUtility.SetIconSize(new Vector2(height, height));
         bool isDragged = DragAndDrop.objectReferences.Length == 1 && DragAndDrop.objectReferences.Contains(obj);
 
         if (hover && selected) GUI.backgroundColor = new Color(0.9f, 0.9f, 0.9f);
@@ -513,19 +514,19 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
                 content.image = EditorGUIUtility.IconContent("GameObject Icon").image;
             if (PrefabUtility.IsAddedGameObjectOverride(go)) isAddedGameObject = true;
         }
-        if (pinned) style.padding.right += rowHeight;
+        if (pinned) style.padding.right += height;
         style.Draw(rect, content, false, false, selected, true);
         GUI.contentColor = oldColor;
         if (pinned)
         {
             var pinnedIconContent = EditorGUIUtility.IconContent("Favorite On Icon");
-            Rect pinnedIconRect = new Rect(rect.xMax - 2 * rowHeight, rect.yMax - rowHeight, rowHeight, rowHeight);
+            Rect pinnedIconRect = new Rect(rect.xMax - 2 * height, rect.yMax - height, height, height);
             EditorStyles.label.Draw(pinnedIconRect, pinnedIconContent, false, false, true, true);
         }
         if (isAddedGameObject)
         {
             var iconContent = EditorGUIUtility.IconContent("PrefabOverlayAdded Icon");
-            Rect iconRect = new Rect(rect.xMin, rect.yMin, rowHeight + 5, rowHeight);
+            Rect iconRect = new Rect(rect.xMin, rect.yMin, height + 5, height);
             EditorStyles.label.Draw(iconRect, iconContent, false, false, true, true);
         }
 
@@ -534,12 +535,13 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
         GUI.backgroundColor = oldBackGroundColor;
     }
 
-    private bool DrawPingButton(Rect rect, int rowHeight, Object obj, bool isPinned)
+    private bool DrawPingButton(Rect rect, Object obj, bool isPinned)
     {
+        int height = (int)rect.height;
         bool clicked = false;
         Color oldBackgroundColor = GUI.backgroundColor;
         Vector2 oldIconSize = EditorGUIUtility.GetIconSize();
-        EditorGUIUtility.SetIconSize(new Vector2(rowHeight / 2 + 3, rowHeight / 2 + 3));
+        EditorGUIUtility.SetIconSize(new Vector2(height / 2 + 3, height / 2 + 3));
 
         var pingButtonContent = EditorGUIUtility.IconContent("HoloLensInputModule Icon");
         pingButtonContent.tooltip = AssetDatabase.GetAssetPath(obj);
