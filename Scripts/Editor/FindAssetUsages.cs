@@ -25,7 +25,7 @@ public class FindAssetUsages : EditorWindow
         "cs.meta", "asmdef", "asmref",
     };
 
-    private List<string> assetPaths = new List<string>();
+    private List<Object> assets = new();
     private string selectedAssetGuid;
     private string selectedAssetPath;
     private string selectedAssetName;
@@ -105,12 +105,9 @@ public class FindAssetUsages : EditorWindow
         EditorGUILayout.Space();
 
         scroll = EditorGUILayout.BeginScrollView(scroll);
-        foreach (string assetFilename in assetPaths)
+        foreach (var asset in assets)
         {
-            string fileName = assetFilename.EndsWith(".meta") ?
-                assetFilename.Substring(0, assetFilename.Length - 5) : assetFilename;
-            var asset = AssetDatabase.LoadAssetAtPath<Object>(fileName);
-            EditorGUILayout.LabelField(fileName);
+            EditorGUILayout.LabelField(AssetDatabase.GetAssetPath(asset));
             if (asset != null)
             {
                 var type = asset.GetType();
@@ -136,12 +133,26 @@ public class FindAssetUsages : EditorWindow
         tokenSource = new CancellationTokenSource();
         progressId = Progress.Start($"Find Asset Usages {selectedAssetName}");
         Progress.RegisterCancelCallback(progressId, CancelSearch);
-        assetPaths = await FindAssetUsageAsync(assetGuid, tokenSource.Token, progressId);
+        assets = await FindAssetUsageAsync(assetGuid, tokenSource.Token, progressId);
         Repaint();
         tokenSource = null;
     }
 
-    public static async Task<List<string>> FindAssetUsageAsync(string assetGuid, CancellationToken token, int? progressId = null,
+    private static List<Object> LoadAssetPaths(List<string> assetPaths)
+    {
+        var assets = new List<Object>();
+        foreach (string assetFilename in assetPaths)
+        {
+            string fileName = assetFilename.EndsWith(".meta") ?
+                assetFilename.Substring(0, assetFilename.Length - 5) : assetFilename;
+            var asset = AssetDatabase.LoadAssetAtPath<Object>(fileName);
+            if (asset != null)
+                assets.Add(asset);
+        }
+        return assets;
+    }
+
+    public static async Task<List<Object>> FindAssetUsageAsync(string assetGuid, CancellationToken token, int? progressId = null,
         bool showProgressBar = false)
     {
         var usedByAssetsPaths = new List<string>(); // Empty old results
@@ -163,7 +174,7 @@ public class FindAssetUsages : EditorWindow
             progressId = Progress.Start($"Find Asset Usages {assetName}");
         new ItemProgress(progressId.Value, showProgressBar);
         await Task.Run(() => Find());
-        return usedByAssetsPaths;
+        return LoadAssetPaths(usedByAssetsPaths);
 
         void Find()
         {
@@ -223,7 +234,7 @@ public class FindAssetUsages : EditorWindow
         Repaint();
     }
 
-    public static List<string> FindAssetUsageSync(string assetGuid)
+    public static List<Object> FindAssetUsageSync(string assetGuid)
     {
         var usedByAssetsPaths = new List<string>(); // Empty old results
 
@@ -255,7 +266,7 @@ public class FindAssetUsages : EditorWindow
             if (EditorUtility.DisplayCancelableProgressBar("Searching...", "Searching for asset references", progress))
             {
                 EditorUtility.ClearProgressBar();
-                return usedByAssetsPaths;
+                return LoadAssetPaths(usedByAssetsPaths);
             }
             current++;
 
@@ -267,7 +278,8 @@ public class FindAssetUsages : EditorWindow
             }
         }
         EditorUtility.ClearProgressBar();
-        return usedByAssetsPaths;
+
+        return LoadAssetPaths(usedByAssetsPaths);
     }
 
     public class ItemProgress
