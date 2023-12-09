@@ -59,6 +59,7 @@ Assets/Plugins/Android/*.jar.meta
 # ======= #
 IgnoreSCM/
 ExternalAssets/
+TextMesh Pro/
 *.unity
 *.meta
 Assets/IgnoreSCM/
