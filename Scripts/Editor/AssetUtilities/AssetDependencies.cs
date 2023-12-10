@@ -6,6 +6,7 @@ using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
+using static EditorHelper;
 
 public class AssetDependencies : EditorWindow, IHasCustomMenu
 {
@@ -503,70 +504,6 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
             SetAssets(this);
             adjustSize = true;
         }
-    }
-    #endregion
-
-    #region Reflection
-    private static void OpenPropertyEditor(Object obj)
-    {
-        string windowTypeName = "UnityEditor.PropertyEditor";
-        var windowType = typeof(Editor).Assembly.GetType(windowTypeName);
-        MethodInfo builderMethod = windowType.GetMethod("OpenPropertyEditor",
-            BindingFlags.Static | BindingFlags.NonPublic,
-            null,
-            new Type[] { typeof(Object), typeof(bool) },
-            null
-            );
-        builderMethod.Invoke(null, new object[] { obj, true });
-    }
-
-
-    // Component menu
-    private static void OpenObjectContextMenu(Rect rect, Object obj)
-    {
-        var classType = typeof(EditorUtility);
-        MethodInfo builderMethod =
-            classType.GetMethod("DisplayObjectContextMenu", BindingFlags.Static | BindingFlags.NonPublic, null,
-            new Type[] { typeof(Rect), typeof(Object), typeof(int) }, null);
-        builderMethod.Invoke(null, new object[] { rect, obj, 0 });
-    }
-    #endregion
-
-    #region Helpers
-    private static int Mod(int x, int m)
-    {
-        return (x % m + m) % m; // Always positive modulus
-    }
-
-    private static bool IsComponent(Object obj)
-    {
-        return obj is Component;
-    }
-
-    private static bool IsAsset(Object obj)
-    {
-        return AssetDatabase.Contains(obj);
-    }
-
-    private static bool IsNonAssetGameObject(Object obj)
-    {
-        return !IsAsset(obj) && obj is GameObject;
-    }
-
-    private static bool IsSceneObject(Object obj, out GameObject main)
-    {
-        if (IsNonAssetGameObject(obj))
-        {
-            main = (GameObject)obj;
-            return true;
-        }
-        else if (IsComponent(obj) && IsNonAssetGameObject(((Component)obj).gameObject))
-        {
-            main = ((Component)obj).gameObject;
-            return true;
-        }
-        main = null;
-        return false;
     }
     #endregion
 }

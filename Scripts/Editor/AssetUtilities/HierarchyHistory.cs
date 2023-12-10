@@ -6,6 +6,7 @@ using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
 using System.Linq;
 using System;
+using static EditorHelper;
 #if !UNITY_2021_2_OR_NEWER
 using UnityEditor.Experimental.SceneManagement; // Out of experimental in 2021.2
 #endif

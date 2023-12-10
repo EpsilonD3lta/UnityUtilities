@@ -1,7 +1,7 @@
 ﻿using UnityEditor;
 using UnityEngine;
 
-public static class EditorExtensions
+public static class InspectorExtensions
 {
     [MenuItem("CONTEXT/RectTransform/Anchors to Corners")]
     static void AnchorsToCorners(MenuCommand command)

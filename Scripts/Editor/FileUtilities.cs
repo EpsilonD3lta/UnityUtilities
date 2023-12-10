@@ -17,19 +17,6 @@ using System.Runtime.Serialization;
 // Menu item shortcuts: % == ctrl, # == shift, & == alt, _ == no modifier, LEFT, RIGHT, UP, DOWN, F1..F12, HOME, END, PGUP, PGDN
 public class FileUtilities : Editor
 {
-
-    [MenuItem("Assets/Recompile Scripts")]
-    public static void RecompileScripts()
-    {
-        UnityEditor.Compilation.CompilationPipeline.RequestScriptCompilation();
-    }
-
-    [MenuItem("Assets/Recompile Scripts Clean")]
-    public static void RecompileScriptsClean()
-    {
-        UnityEditor.Compilation.CompilationPipeline.RequestScriptCompilation(UnityEditor.Compilation.RequestScriptCompilationOptions.CleanBuildCache);
-    }
-
     [MenuItem("Assets/File/Copy GUID %#c")]
     public static void CopyGuid()
     {
@@ -39,22 +26,6 @@ public class FileUtilities : Editor
             GUIUtility.systemCopyBuffer = guid;
             Debug.Log($"{AssetDatabase.GUIDToAssetPath(guid)} GUID copied to clipboard: {guid}");
         }
-    }
-
-    [MenuItem("Assets/Mark Assets Dirty", priority = 38)]
-    public static void MarkDirty()
-    {
-        foreach (var obj in Selection.objects)
-        {
-            EditorUtility.SetDirty(obj);
-        }
-    }
-
-    [MenuItem("Assets/Force Reserialize", priority = 39)]
-    public static void ForceReserialize()
-    {
-        var assetPaths = Selection.assetGUIDs.ToList().Select(x => AssetDatabase.GUIDToAssetPath(x));
-        AssetDatabase.ForceReserializeAssets(assetPaths);
     }
 
     //private static string VisualStudio2019Path = "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/devenv.exe";
@@ -112,23 +83,6 @@ public class FileUtilities : Editor
         var type = loadedScript.GetClass();
         var instance = FormatterServices.GetUninitializedObject(type);
         Debug.Log(JsonConvert.SerializeObject(instance));
-    }
-
-    [MenuItem("Editor/Open Editor Log")]
-    public static void OpenEditorLog()
-    {
-        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        string VSCodePath = localAppData + "/Programs/Microsoft VS Code/Code.exe";
-        Debug.Log(VSCodePath + " \"" + localAppData + "/Unity/Editor.log\"");
-        ProcessStartInfo process = new ProcessStartInfo(
-            VSCodePath, " \"" + localAppData + "/Unity/Editor/Editor.log\"")
-        {
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true,
-            UseShellExecute = false
-        };
-        Process.Start(process);
     }
 
     private static string GExtensionsPath = "C:/Program Files (x86)/GitExtensions/GitExtensions.exe";
