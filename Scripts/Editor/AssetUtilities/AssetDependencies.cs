@@ -35,6 +35,7 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
     private bool uses = true;
     private bool usedBy = false;
     private bool recursive = false;
+    private bool packageRecursive = false;
     private bool packages = false;
     private bool searchAgain = true;
 
@@ -42,7 +43,7 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
     private List<string> sameNamePaths = new();
     private List<string> usesPaths = new();
     private List<string> usedByPaths = new();
-    private List<string> packageDependanciesPaths = new();
+    private List<string> packagesUsesPaths = new();
     private List<string> allItemsPaths = new();
 
     private List<Object> allItems = new List<Object>();
@@ -103,11 +104,10 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
         {
             var usesPaths = AssetDatabase.GetDependencies(selectedPaths.ToArray(), window.recursive);
             usesPaths = usesPaths.Where(x => !selectedPaths.Contains(x)).ToArray();
-            window.packageDependanciesPaths = usesPaths.Where(x => x.StartsWith("Packages")).ToList()
-                .OrderBy(x => x, treeViewComparer).ToList();
-            usesPaths = usesPaths.Where(x => !x.StartsWith("Packages")).ToArray();
-            usesPaths = usesPaths.OrderBy(x => x, treeViewComparer).ToArray();
+            usesPaths = usesPaths.Where(x => !x.StartsWith("Packages"))
+                .OrderBy(x => x, treeViewComparer).ToArray();
             window.usesPaths = usesPaths.ToList();
+
             allItemsPaths.AddRange(usesPaths);
         }
 
@@ -121,7 +121,7 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
                     usedBy.AddRange(FindAssetUsages.FindAssetUsage(selectedGuid));
                 window.searchAgain = false;
                 var usedByPaths = usedBy.Where(x => IsAsset(x)).Select(x => AssetDatabase.GetAssetPath(x)).ToList();
-                usedByPaths.OrderBy(x => x, treeViewComparer).ToList();
+                usedByPaths = usedByPaths.Distinct().OrderBy(x => x, treeViewComparer).ToList();
                 window.usedByPaths = usedByPaths;
                 window.adjustSize = true;
                 window.Repaint();
@@ -130,7 +130,15 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
         }
 
         if (window.packages)
-            allItemsPaths.AddRange(window.packageDependanciesPaths);
+        {
+            var packagesUsesPaths = AssetDatabase.GetDependencies(selectedPaths.ToArray(), window.packageRecursive);
+            packagesUsesPaths = packagesUsesPaths.Where(x => !selectedPaths.Contains(x)).ToArray();
+            packagesUsesPaths = packagesUsesPaths.Where(x => x.StartsWith("Packages"))
+                .OrderBy(x => x, treeViewComparer).ToArray();
+            window.packagesUsesPaths = packagesUsesPaths.ToList();
+
+            allItemsPaths.AddRange(packagesUsesPaths);
+        }
 
         window.allItemsPaths = allItemsPaths;
         window.allItems = allItemsPaths.Select(x => AssetDatabase.LoadMainAssetAtPath(x)).ToList();
@@ -233,11 +241,11 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
         }
 
         ToggleHeader(new Rect(xPos, yPos, headerWidth, headerHeight), ref packages, "Packages");
-        AdditionalToggle(new Rect(xPos + headerWidth, yPos, 100, headerHeight + 2), ref recursive, "Recursive");
+        AdditionalToggle(new Rect(xPos + headerWidth, yPos, 100, headerHeight + 2), ref packageRecursive, "Recursive");
         yPos += 20;
         if (packages)
         {
-            for (int j = 0; j < packageDependanciesPaths.Count; j++)
+            for (int j = 0; j < packagesUsesPaths.Count; j++)
             {
                 var obj = allItems[i];
                 if (obj == null) continue;
