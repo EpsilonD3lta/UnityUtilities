@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using UnityEditor;
@@ -130,6 +131,25 @@ public class EditorHelper
         }
         main = null;
         return false;
+    }
+
+    /// <summary>
+    /// Orders string paths in the same order as in Project Tab. Folders are first at the same level of depth
+    /// </summary>
+    public class TreeViewComparer : IComparer<string>
+    {
+        public int Compare(string x, string y)
+        {
+            if (x == y) return 0;
+            if (string.IsNullOrEmpty(x)) return 1;
+            if (string.IsNullOrEmpty(y)) return -1;
+            var xDir = Path.GetDirectoryName(x);
+            var yDir = Path.GetDirectoryName(y);
+            if (xDir == yDir) return x.CompareTo(y);
+            if (yDir.StartsWith(xDir)) return 1; // yDir is subdirectory of xDir, x > y, x after y, yDir will be on top
+            if (xDir.StartsWith(yDir)) return -1;
+            return x.CompareTo(y);
+        }
     }
     #endregion
 }

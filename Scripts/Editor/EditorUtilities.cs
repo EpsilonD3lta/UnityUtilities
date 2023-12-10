@@ -9,13 +9,13 @@ using Debug = UnityEngine.Debug;
 
 public class EditorUtilities
 {
-    [MenuItem("Editor/Recompile Scripts")]
+    [MenuItem("Editor/Recompile Scripts _F5")]
     public static void RecompileScripts()
     {
         UnityEditor.Compilation.CompilationPipeline.RequestScriptCompilation();
     }
 
-    [MenuItem("Editor/Recompile Scripts Clean")]
+    [MenuItem("Editor/Recompile Scripts Clean &F5")]
     public static void RecompileScriptsClean()
     {
         UnityEditor.Compilation.CompilationPipeline.RequestScriptCompilation(UnityEditor.Compilation.RequestScriptCompilationOptions.CleanBuildCache);
@@ -43,7 +43,7 @@ public class EditorLoopUpdater
 {
     private static bool isUpdating = false;
 
-    [MenuItem("Editor/Loop")]
+    [MenuItem("Editor/Loop _F6")]
     public static void Loop()
     {
         if (!isUpdating) EditorApplication.update += QueryUpdate;
@@ -51,7 +51,7 @@ public class EditorLoopUpdater
         isUpdating = true;
     }
 
-    [MenuItem("Editor/StopLoop")]
+    [MenuItem("Editor/StopLoop _F7")]
     public static void StopLoop()
     {
         EditorApplication.update -= QueryUpdate;

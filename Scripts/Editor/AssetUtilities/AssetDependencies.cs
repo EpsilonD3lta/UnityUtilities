@@ -2,24 +2,27 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
 using static EditorHelper;
+using static MyGUI;
 
 public class AssetDependencies : EditorWindow, IHasCustomMenu
 {
     private const int rowHeight = 16;
     private static class Styles
     {
-        public static GUIStyle insertion = "TV Insertion";
-        public static GUIStyle lineStyle = "TV Line";
-        public static GUIStyle selectionStyle = "TV Selection";
-        public static GUIStyle pingButtonStyle;
         public static GUIStyle foldoutStyle = new GUIStyle();
-        public static bool areStylesSet;
+        static Styles()
+        {
+            foldoutStyle = new GUIStyle(EditorStyles.miniPullDown);
+            foldoutStyle.alignment = TextAnchor.MiddleLeft;
+            foldoutStyle.padding = new RectOffset(19, 0, 0, 0);
+        }
     }
+
+    private static TreeViewComparer treeViewComparer;
 
     private bool initialized;
     private bool adjustSize;
@@ -45,19 +48,6 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
     private List<Object> allItems = new List<Object>();
     private Object hoverObject;
 
-    public class TreeViewComparer : IComparer<string>
-    {
-        public int Compare(string x, string y)
-        {
-            var xDir = Path.GetDirectoryName(x);
-            var yDir = Path.GetDirectoryName(y);
-            if (xDir == yDir) return x.CompareTo(y);
-            if (yDir.StartsWith(xDir)) return 1; // yDir is subdirectory of xDir, x > y, x after y, yDir will be on top
-            if (xDir.StartsWith(yDir)) return -1;
-            return x.CompareTo(y);
-        }
-    }
-
     [MenuItem("Window/Asset Dependencies _#F11")]
     private static void CreateWindow()
     {
@@ -66,7 +56,7 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
         window.minSize = new Vector2(100, rowHeight + 1);
 
         var selectedPaths = Selection.assetGUIDs.Select(x => AssetDatabase.GUIDToAssetPath(x));
-        selectedPaths = selectedPaths.OrderBy(x => x, new TreeViewComparer());
+        selectedPaths = selectedPaths.OrderBy(x => x, treeViewComparer);
 
         // Prefab instances in Hierarchy. ExludePrefab does not exclude instances of prefabs, only assets.
         var selectedHierarchy = Selection.GetTransforms(SelectionMode.Unfiltered | SelectionMode.ExcludePrefab)
@@ -104,7 +94,7 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
                 sameNamePaths = sameNamePaths
                     .Where(x => names.Contains(Path.GetFileNameWithoutExtension(x)));
             sameNamePaths = sameNamePaths.Where(x => !x.StartsWith("Packages") && !selectedPaths.Contains(x));
-            sameNamePaths = sameNamePaths.OrderBy(x => x, new TreeViewComparer()).ToList();
+            sameNamePaths = sameNamePaths.OrderBy(x => x, treeViewComparer).ToList();
             window.sameNamePaths = sameNamePaths.ToList();
             allItemsPaths.AddRange(sameNamePaths);
         }
@@ -114,9 +104,9 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
             var usesPaths = AssetDatabase.GetDependencies(selectedPaths.ToArray(), window.recursive);
             usesPaths = usesPaths.Where(x => !selectedPaths.Contains(x)).ToArray();
             window.packageDependanciesPaths = usesPaths.Where(x => x.StartsWith("Packages")).ToList()
-                .OrderBy(x => x, new TreeViewComparer()).ToList();
+                .OrderBy(x => x, treeViewComparer).ToList();
             usesPaths = usesPaths.Where(x => !x.StartsWith("Packages")).ToArray();
-            usesPaths = usesPaths.OrderBy(x => x, new TreeViewComparer()).ToArray();
+            usesPaths = usesPaths.OrderBy(x => x, treeViewComparer).ToArray();
             window.usesPaths = usesPaths.ToList();
             allItemsPaths.AddRange(usesPaths);
         }
@@ -131,7 +121,7 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
                     usedBy.AddRange(FindAssetUsages.FindAssetUsage(selectedGuid));
                 window.searchAgain = false;
                 var usedByPaths = usedBy.Where(x => IsAsset(x)).Select(x => AssetDatabase.GetAssetPath(x)).ToList();
-                usedByPaths.OrderBy(x => x, new TreeViewComparer()).ToList();
+                usedByPaths.OrderBy(x => x, treeViewComparer).ToList();
                 window.usedByPaths = usedByPaths;
                 window.adjustSize = true;
                 window.Repaint();
@@ -159,7 +149,6 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
 
     private void OnGUI()
     {
-        SetStyles();
         var ev = Event.current; //Debug.Log(ev.type);
         var height = position.height;
         var columnWidth = position.width;
@@ -286,35 +275,21 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
         if (isHover) isAnyHover = true;
         if (isHover) hoverObject = obj;
 
-        if (ev.type == EventType.Repaint) DrawObjectRow(fullRect, obj, isHover, isSelected, false);
-        DrawPingButton(pingButtonRect, obj, false, pingButtonContent);
+        if (DrawObjectRow(fullRect, pingButtonRect, obj, isHover, isSelected, false, pingButtonContent))
+        {
+            if (Event.current.button == 0)
+                PingButtonLeftClick(obj);
+            else if (Event.current.button == 1)
+                PingButtonRightClick(obj);
+            else if (Event.current.button == 2)
+                PingButtonMiddleClick(obj);
+        }
 
         if (isShortRectHover)
         {
-            // Left button
             if (ev.type == EventType.MouseUp && ev.button == 0 && ev.clickCount == 1) // Select on MouseUp
             {
-                if (ev.modifiers == EventModifiers.Control) // Ctrl select
-                    if (!isSelected) Selection.objects = Selection.objects.Append(obj).ToArray();
-                    else Selection.objects = Selection.objects.Where(x => x != obj).ToArray();
-                else if (ev.modifiers == EventModifiers.Shift) // Shift select
-                {
-                    int firstSelected = allItems.FindIndex(x => Selection.objects.Contains(x));
-                    if (firstSelected != -1)
-                    {
-                        int startIndex = Mathf.Min(firstSelected + 1, i);
-                        int count = Mathf.Abs(firstSelected - i);
-                        Selection.objects = Selection.objects.
-                            Concat(allItems.GetRange(startIndex, count)).Distinct().ToArray();
-                    }
-                    else Selection.objects = Selection.objects.Append(obj).ToArray();
-                }
-                else
-                {
-                    Selection.activeObject = obj; // Ordinary select
-                    Selection.objects = new Object[] { obj };
-                }
-
+                LeftMouseUp(obj, isSelected, i);
                 ev.Use();
             }
             else if (ev.type == EventType.MouseDown && ev.button == 0 && ev.clickCount == 2)
@@ -322,10 +297,9 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
                 DoubleClick(obj);
                 ev.Use();
             }
-            // Right button
             else if (ev.type == EventType.MouseDown && ev.button == 1)
             {
-                Selection.activeObject = obj;
+                RightClick(obj);
                 ev.Use();
             }
             else if (ev.type == EventType.ContextClick)
@@ -335,9 +309,41 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
         }
     }
 
+    private void LeftMouseUp(Object obj, bool isSelected, int i)
+    {
+        var ev = Event.current;
+        if (ev.modifiers == EventModifiers.Control) // Ctrl select
+            if (!isSelected) Selection.objects = Selection.objects.Append(obj).ToArray();
+            else Selection.objects = Selection.objects.Where(x => x != obj).ToArray();
+        else if (ev.modifiers == EventModifiers.Shift) // Shift select
+        {
+            int firstSelected = allItems.FindIndex(x => Selection.objects.Contains(x));
+            if (firstSelected != -1)
+            {
+                int startIndex = Mathf.Min(firstSelected + 1, i);
+                int count = Mathf.Abs(firstSelected - i);
+                Selection.objects = Selection.objects.
+                    Concat(allItems.GetRange(startIndex, count)).Distinct().ToArray();
+            }
+            else Selection.objects = Selection.objects.Append(obj).ToArray();
+        }
+        else
+        {
+            Selection.activeObject = obj; // Ordinary select
+            Selection.objects = new Object[] { obj };
+        }
+    }
+
     private void DoubleClick(Object obj)
     {
         if (IsAsset(obj)) AssetDatabase.OpenAsset(obj);
+        else if (IsNonAssetGameObject(obj)) SceneView.lastActiveSceneView.FrameSelected();
+    }
+
+    // This is different event then context click, bot are executed, context after right click
+    private void RightClick(Object obj)
+    {
+        Selection.activeObject = obj;
     }
 
     private void ContextClick(Rect rect, Object obj)
@@ -345,6 +351,33 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
         Selection.activeObject = obj;
         if (IsComponent(obj)) OpenObjectContextMenu(rect, obj);
         else if (IsAsset(obj)) EditorUtility.DisplayPopupMenu(rect, "Assets/", null);
+        else if (IsNonAssetGameObject(obj))
+        {
+            if (Selection.transforms.Length > 0) // Just to be sure it's really a HierarchyGameobject
+                OpenHierarchyContextMenu(Selection.transforms[0].gameObject.GetInstanceID());
+        }
+    }
+
+    private void PingButtonLeftClick(Object obj)
+    {
+        if (Event.current.modifiers == EventModifiers.Alt) // Add or remove pinned item
+        {
+            string path = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(obj);
+            obj = AssetDatabase.LoadMainAssetAtPath(path);
+            EditorGUIUtility.PingObject(obj);
+        }
+        else EditorGUIUtility.PingObject(obj);
+    }
+
+    private void PingButtonRightClick(Object obj)
+    {
+        OpenPropertyEditor(obj);
+    }
+
+    private void PingButtonMiddleClick(Object obj)
+    {
+        if (Event.current.modifiers == EventModifiers.Alt)
+            Debug.Log($"{GlobalObjectId.GetGlobalObjectIdSlow(obj)} InstanceID: {obj.GetInstanceID()}");
     }
 
     private void KeyboardNavigation(Event ev)
@@ -372,115 +405,6 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
     }
 
     #region Drawing
-    private void DrawObjectRow(Rect rect, Object obj, bool hover, bool selected, bool pinned)
-    {
-        int height = (int)rect.height;
-        Color oldBackGroundColor = GUI.backgroundColor;
-        Color oldColor = GUI.contentColor;
-        Vector2 oldIconSize = EditorGUIUtility.GetIconSize();
-        EditorGUIUtility.SetIconSize(new Vector2(height, height));
-        bool isDragged = DragAndDrop.objectReferences.Length == 1 && DragAndDrop.objectReferences.Contains(obj);
-
-        if (hover && selected) GUI.backgroundColor = new Color(0.9f, 0.9f, 0.9f);
-        if (selected) Styles.selectionStyle.Draw(rect, false, false, true, true);
-        if ((hover || isDragged) && !selected) Styles.selectionStyle.Draw(rect, false, false, false, false);
-
-        var style = Styles.lineStyle;
-        var oldPadding = style.padding.right;
-
-        GUIContent content = EditorGUIUtility.ObjectContent(obj, obj.GetType());
-        bool isAddedGameObject = false;
-        if (IsNonAssetGameObject(obj))
-        {
-            var go = (GameObject)obj;
-            if (!go.activeInHierarchy) GUI.contentColor = Color.white * 0.694f;
-            if (!PrefabUtility.IsAnyPrefabInstanceRoot(go))
-                content.image = EditorGUIUtility.IconContent("GameObject Icon").image;
-            if (PrefabUtility.IsAddedGameObjectOverride(go)) isAddedGameObject = true;
-        }
-        if (pinned) style.padding.right += height;
-        style.Draw(rect, content, false, false, selected, true);
-        GUI.contentColor = oldColor;
-        if (pinned)
-        {
-            var pinnedIconContent = EditorGUIUtility.IconContent("Favorite On Icon");
-            Rect pinnedIconRect = new Rect(rect.xMax - 2 * height, rect.yMax - height, height, height);
-            EditorStyles.label.Draw(pinnedIconRect, pinnedIconContent, false, false, true, true);
-        }
-        if (isAddedGameObject)
-        {
-            var iconContent = EditorGUIUtility.IconContent("PrefabOverlayAdded Icon");
-            Rect iconRect = new Rect(rect.xMin, rect.yMin, height + 5, height);
-            EditorStyles.label.Draw(iconRect, iconContent, false, false, true, true);
-        }
-
-        style.padding.right = oldPadding;
-        EditorGUIUtility.SetIconSize(oldIconSize);
-        GUI.backgroundColor = oldBackGroundColor;
-    }
-
-    private bool DrawPingButton(Rect rect, Object obj, bool isPinned, string content = null)
-    {
-        int height = (int)rect.height;
-        bool clicked = false;
-        Color oldBackgroundColor = GUI.backgroundColor;
-        Vector2 oldIconSize = EditorGUIUtility.GetIconSize();
-        EditorGUIUtility.SetIconSize(new Vector2(height / 2 + 3, height / 2 + 3));
-
-        var pingButtonContent = EditorGUIUtility.IconContent("HoloLensInputModule Icon");
-        if (!string.IsNullOrEmpty(content))
-            pingButtonContent = new GUIContent(content);
-        pingButtonContent.tooltip = AssetDatabase.GetAssetPath(obj);
-
-        if (IsComponent(obj)) GUI.backgroundColor = new Color(1f, 1.5f, 1f);
-        if (!IsAsset(obj)) pingButtonContent = EditorGUIUtility.IconContent("GameObject Icon");
-
-        if (GUI.Button(rect, pingButtonContent, Styles.pingButtonStyle))
-        {
-            if (Event.current.button == 0)
-            {
-                if (Event.current.modifiers == EventModifiers.Alt) // Add or remove pinned item
-                {
-                    string path = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(obj);
-                    obj = AssetDatabase.LoadMainAssetAtPath(path);
-                    EditorGUIUtility.PingObject(obj);
-                }
-                else EditorGUIUtility.PingObject(obj);
-            }
-            else if (Event.current.button == 1) OpenPropertyEditor(obj);
-            else if (Event.current.button == 2)
-            {
-                if (Event.current.modifiers == EventModifiers.Alt)
-                    Debug.Log($"{GlobalObjectId.GetGlobalObjectIdSlow(obj)} InstanceID: {obj.GetInstanceID()}");
-                else
-                {
-                    //clicked = true; // Only return clicked if we change something
-                }
-            }
-        }
-
-        EditorGUIUtility.SetIconSize(oldIconSize);
-        GUI.backgroundColor = oldBackgroundColor;
-        return clicked;
-    }
-
-    private static void SetStyles()
-    {
-        if (!Styles.areStylesSet)
-        {
-            Styles.foldoutStyle = new GUIStyle(EditorStyles.miniPullDown);
-            Styles.foldoutStyle.alignment = TextAnchor.MiddleLeft;
-            Styles.foldoutStyle.padding = new RectOffset(19, 0, 0, 0);
-            Styles.lineStyle = new GUIStyle(Styles.lineStyle);
-            Styles.lineStyle.alignment = TextAnchor.MiddleLeft;
-            Styles.lineStyle.padding.right += rowHeight;
-            Styles.pingButtonStyle = new GUIStyle(GUI.skin.button);
-            Styles.pingButtonStyle.padding = new RectOffset(2, 0, 0, 1);
-            Styles.pingButtonStyle.alignment = TextAnchor.MiddleCenter;
-            Styles.areStylesSet = true;
-        }
-    }
-
     public void ToggleHeader(Rect rect, ref bool selected, string text)
     {
         var oldBackgroundColor = GUI.backgroundColor;
