@@ -1,10 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using UnityEditor;
 using UnityEditor.SceneManagement;
-using UnityEditorInternal;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
@@ -129,35 +127,22 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
             if (isHover) hoverObject = obj;
 
             if (ev.type == EventType.Repaint) DrawObjectRow(fullRect, obj, isHover, isSelected, isPinned);
-            if (DrawPingButton(pingButtonRect, obj, isPinned)) shouldLimitAndOrderHistory = true;
+            if (DrawPingButton(pingButtonRect, obj, isPinned))
+            {
+                if (Event.current.button == 0)
+                    PingButtonLeftClick(obj);
+                else if (Event.current.button == 1)
+                    PingButtonRightClick(obj);
+                else if (Event.current.button == 2)
+                    if (PingButtonMiddleClick(obj, isPinned));
+                        shouldLimitAndOrderHistory = true;
+            }
 
             if (isShortRectHover)
             {
-                // Left button
-                if (ev.type == EventType.MouseUp && ev.button == 0 &&  ev.clickCount == 1) // Select on MouseUp
+                if (ev.type == EventType.MouseUp && ev.button == 0 &&  ev.clickCount == 1)
                 {
-                    if (ev.modifiers == EventModifiers.Control) // Ctrl select
-                        if (!isSelected) Selection.objects = Selection.objects.Append(obj).ToArray();
-                        else Selection.objects = Selection.objects.Where(x => x != obj).ToArray();
-                    else if (ev.modifiers == EventModifiers.Shift) // Shift select
-                    {
-                        int firstSelected = groupedHistory.FindIndex(x => Selection.objects.Contains(x));
-                        if (firstSelected != -1)
-                        {
-                            int startIndex = Mathf.Min(firstSelected + 1, i);
-                            int count = Mathf.Abs(firstSelected - i);
-                            Selection.objects = Selection.objects.
-                                Concat(groupedHistory.GetRange(startIndex, count)).Distinct().ToArray();
-                        }
-                        else Selection.objects = Selection.objects.Append(obj).ToArray();
-                    }
-                    else
-                    {
-                        Selection.activeObject = obj; // Ordinary select
-                        if (AssetDatabase.IsValidFolder(AssetDatabase.GetAssetPath(obj)))
-                            ExpandFolder(obj.GetInstanceID(), true);
-                    }
-
+                    LeftMouseUp(obj, isSelected, i); // Select on MouseUp
                     ev.Use();
                 }
                 else if (ev.type == EventType.MouseDown && ev.button == 0 && ev.clickCount == 2)
@@ -165,35 +150,18 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
                     DoubleClick(obj);
                     ev.Use();
                 }
-                // Right button
                 else if (ev.type == EventType.MouseDown && ev.button == 1)
                 {
-                    Selection.activeObject = obj;
+                    RightClick(obj);
                     ev.Use();
                 }
                 else if (ev.type == EventType.ContextClick)
                 {
                     ContextClick(new Rect(ev.mousePosition.x, ev.mousePosition.y, 0, 0), obj);
                 }
-                // Middle button
-                else if (ev.type == EventType.MouseDown && ev.button == 2) // Middle click
+                else if (ev.type == EventType.MouseDown && ev.button == 2)
                 {
-                    if (ev.modifiers == EventModifiers.Control)
-                        if (isPinned) ClearPinned();
-                        else ClearHistory();
-                    else if (isSelected)
-                    {
-                        RemoveAllHistory(x => Selection.objects.Contains(x));
-                        RemoveAllPinned(x => Selection.objects.Contains(x));
-                    }
-                    else
-                    {
-                        RemoveHistory(obj);
-                        RemovePinned(obj);
-                    }
-                    shouldLimitAndOrderHistory = true;
-                    ev.Use();
-                    Repaint();
+                    MiddleClick(obj, isSelected, isPinned, ref shouldLimitAndOrderHistory);
                 }
                 // Drag
                 else if (ev.type == EventType.MouseDrag && ev.button == 0 && // Start dragging this asset
@@ -276,10 +244,42 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
         if (!isAnyHover) hoverObject = null;
     }
 
+    private void LeftMouseUp(Object obj, bool isSelected, int i)
+    {
+        var ev = Event.current;
+        if (ev.modifiers == EventModifiers.Control) // Ctrl select
+            if (!isSelected) Selection.objects = Selection.objects.Append(obj).ToArray();
+            else Selection.objects = Selection.objects.Where(x => x != obj).ToArray();
+        else if (ev.modifiers == EventModifiers.Shift) // Shift select
+        {
+            int firstSelected = groupedHistory.FindIndex(x => Selection.objects.Contains(x));
+            if (firstSelected != -1)
+            {
+                int startIndex = Mathf.Min(firstSelected + 1, i);
+                int count = Mathf.Abs(firstSelected - i);
+                Selection.objects = Selection.objects.
+                    Concat(groupedHistory.GetRange(startIndex, count)).Distinct().ToArray();
+            }
+            else Selection.objects = Selection.objects.Append(obj).ToArray();
+        }
+        else
+        {
+            Selection.activeObject = obj; // Ordinary select
+            if (AssetDatabase.IsValidFolder(AssetDatabase.GetAssetPath(obj)))
+                ExpandFolder(obj.GetInstanceID(), true);
+        }
+    }
+
     private void DoubleClick(Object obj)
     {
         if (IsAsset(obj)) AssetDatabase.OpenAsset(obj);
         else if (IsNonAssetGameObject(obj)) SceneView.lastActiveSceneView.FrameSelected();
+    }
+
+    // This is different event then context click, bot are executed, context after right click
+    private void RightClick(Object obj)
+    {
+        Selection.activeObject = obj;
     }
 
     private void ContextClick(Rect rect, Object obj)
@@ -292,6 +292,57 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
             if (Selection.transforms.Length > 0) // Just to be sure it's really a HierarchyGameobject
                 OpenHierarchyContextMenu(Selection.transforms[0].gameObject.GetInstanceID());
         }
+    }
+
+    private void MiddleClick(Object obj, bool isSelected, bool isPinned, ref bool shouldLimitAndOrderHistory)
+    {
+        var ev = Event.current;
+        if (ev.modifiers == EventModifiers.Control)
+            if (isPinned) ClearPinned();
+            else ClearHistory();
+        else if (isSelected)
+        {
+            RemoveAllHistory(x => Selection.objects.Contains(x));
+            RemoveAllPinned(x => Selection.objects.Contains(x));
+        }
+        else
+        {
+            RemoveHistory(obj);
+            RemovePinned(obj);
+        }
+        shouldLimitAndOrderHistory = true;
+        ev.Use();
+        Repaint();
+    }
+
+    private void PingButtonLeftClick(Object obj)
+    {
+        if (Event.current.modifiers == EventModifiers.Alt) // Add or remove pinned item
+        {
+            string path = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(obj);
+            obj = AssetDatabase.LoadMainAssetAtPath(path);
+            EditorGUIUtility.PingObject(obj);
+        }
+        else EditorGUIUtility.PingObject(obj);
+    }
+
+    private void PingButtonRightClick(Object obj)
+    {
+        OpenPropertyEditor(obj);
+    }
+
+    private bool PingButtonMiddleClick(Object obj, bool isPinned)
+    {
+        bool dirtied = false;
+        if (Event.current.modifiers == EventModifiers.Alt)
+            Debug.Log($"{GlobalObjectId.GetGlobalObjectIdSlow(obj)} InstanceID: {obj.GetInstanceID()}");
+        else
+        {
+            if (!isPinned) AddPinned(obj);
+            else RemovePinned(obj);
+            dirtied = true; // Only return dirtied if we change something
+        }
+        return dirtied;
     }
 
     private void DropObjectToWindow()
@@ -539,7 +590,6 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
     private bool DrawPingButton(Rect rect, Object obj, bool isPinned)
     {
         int height = (int)rect.height;
-        bool clicked = false;
         Color oldBackgroundColor = GUI.backgroundColor;
         Vector2 oldIconSize = EditorGUIUtility.GetIconSize();
         EditorGUIUtility.SetIconSize(new Vector2(height / 2 + 3, height / 2 + 3));
@@ -550,31 +600,7 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
         if (IsComponent(obj)) GUI.backgroundColor = new Color(1f, 1.5f, 1f);
         if (!IsAsset(obj)) pingButtonContent = EditorGUIUtility.IconContent("GameObject Icon");
 
-        if (GUI.Button(rect, pingButtonContent, Styles.pingButtonStyle))
-        {
-            if (Event.current.button == 0)
-            {
-                if (Event.current.modifiers == EventModifiers.Alt) // Add or remove pinned item
-                {
-                    string path = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(obj);
-                    obj = AssetDatabase.LoadMainAssetAtPath(path);
-                    EditorGUIUtility.PingObject(obj);
-                }
-                else EditorGUIUtility.PingObject(obj);
-            }
-            else if (Event.current.button == 1) OpenPropertyEditor(obj);
-            else if (Event.current.button == 2)
-            {
-                if (Event.current.modifiers == EventModifiers.Alt)
-                    Debug.Log($"{GlobalObjectId.GetGlobalObjectIdSlow(obj)} InstanceID: {obj.GetInstanceID()}");
-                else
-                {
-                    if (!isPinned) AddPinned(obj);
-                    else RemovePinned(obj);
-                    clicked = true; // Only return clicked if we change something
-                }
-            }
-        }
+        bool clicked = GUI.Button(rect, pingButtonContent, Styles.pingButtonStyle);
 
         EditorGUIUtility.SetIconSize(oldIconSize);
         GUI.backgroundColor = oldBackgroundColor;
