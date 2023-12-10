@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Threading;
 using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -33,7 +32,6 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
     private bool usedBy = false;
     private bool recursive = false;
     private bool packages = false;
-    private CancellationTokenSource tokenSource;
     private bool searchAgain = true;
 
     private List<string> selectedPaths = new();
@@ -87,7 +85,7 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
         menu.AddItem(EditorGUIUtility.TrTextContent("Test"), false, Test);
     }
 
-    public static async void SetAssets(AssetDependencies window)
+    public static void SetAssets(AssetDependencies window)
     {
         var selectedPaths = window.selectedPaths;
         window.usesPaths = new();
@@ -126,21 +124,11 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
         {
             if (window.searchAgain)
             {
-                window.searchAgain = false;
                 var selectedGuids = selectedPaths.Select(x => AssetDatabase.AssetPathToGUID(x));
                 var usedBy = new List<Object>();
-                window.tokenSource = new CancellationTokenSource(); var token = window.tokenSource.Token;
                 foreach (var selectedGuid in selectedGuids)
-                {
-                    usedBy.AddRange(await FindAssetUsages.FindAssetUsageAsync(selectedGuid, token, null));
-                    if (token.IsCancellationRequested)
-                    {
-                        window.searchAgain = true;
-                        window.usedBy = false;
-                        break;
-                    }
-                }
-                window.tokenSource = null;
+                    usedBy.AddRange(FindAssetUsages.FindAssetUsage(selectedGuid));
+                window.searchAgain = false;
                 var usedByPaths = usedBy.Where(x => IsAsset(x)).Select(x => AssetDatabase.GetAssetPath(x)).ToList();
                 usedByPaths.OrderBy(x => x, new TreeViewComparer()).ToList();
                 window.usedByPaths = usedByPaths;
@@ -281,16 +269,6 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
             position = new Rect(position.position,
                 new Vector2(position.width, windowHeight));
             initialized = true; adjustSize = false;
-        }
-    }
-
-    private void OnDisable()
-    {
-        if (tokenSource != null)
-        {
-            tokenSource.Cancel();
-            searchAgain = true;
-            usedBy = false;
         }
     }
 
