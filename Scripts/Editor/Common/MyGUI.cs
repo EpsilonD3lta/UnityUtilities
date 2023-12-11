@@ -25,10 +25,16 @@ public static class MyGUI
         }
     }
 
-    public static bool DrawObjectRow(Rect rect, Rect pingButtonRect, Object obj, bool hover, bool selected, bool pinned,
-        string pingButtonContent = null)
+    public static (bool isHovered, bool isShortRectHovered, bool pingButtonClicked) 
+        DrawObjectRow(Rect rect, Object obj, bool isSelected, bool pinned, string pingButtonContent = null)
     {
         var ev = Event.current;
+
+        Rect shortRect = new Rect(rect.x, rect.y, rect.width - rect.height, rect.height);
+        Rect pingButtonRect = new Rect(shortRect.xMax, shortRect.yMax - shortRect.height, shortRect.height, shortRect.height);
+        bool isHovered = rect.Contains(ev.mousePosition);
+        bool isShortRectHovered = shortRect.Contains(ev.mousePosition);
+
         if (ev.type == EventType.Repaint)
         {
             int height = (int)rect.height;
@@ -38,9 +44,9 @@ public static class MyGUI
             EditorGUIUtility.SetIconSize(new Vector2(height, height));
             bool isDragged = DragAndDrop.objectReferences.Length == 1 && DragAndDrop.objectReferences.Contains(obj);
 
-            if (hover && selected) GUI.backgroundColor = new Color(0.9f, 0.9f, 0.9f);
-            if (selected) Styles.selectionStyle.Draw(rect, false, false, true, true);
-            if ((hover || isDragged) && !selected) Styles.selectionStyle.Draw(rect, false, false, false, false);
+            if (isHovered && isSelected) GUI.backgroundColor = new Color(0.9f, 0.9f, 0.9f);
+            if (isSelected) Styles.selectionStyle.Draw(rect, false, false, true, true);
+            if ((isHovered || isDragged) && !isSelected) Styles.selectionStyle.Draw(rect, false, false, false, false);
 
             var style = Styles.lineStyle;
             var oldPadding = style.padding.right;
@@ -56,7 +62,7 @@ public static class MyGUI
                 if (PrefabUtility.IsAddedGameObjectOverride(go)) isAddedGameObject = true;
             }
             if (pinned) style.padding.right += height;
-            style.Draw(rect, content, false, false, selected, true);
+            style.Draw(rect, content, false, false, isSelected, true);
             GUI.contentColor = oldColor;
             if (pinned)
             {
@@ -75,7 +81,8 @@ public static class MyGUI
             EditorGUIUtility.SetIconSize(oldIconSize);
             GUI.backgroundColor = oldBackGroundColor;
         }
-        return DrawPingButton(pingButtonRect, obj, pingButtonContent);
+        bool pingButtonClicked = DrawPingButton(pingButtonRect, obj, pingButtonContent);
+        return (isHovered, isShortRectHovered, pingButtonClicked);
     }
 
     public static bool DrawPingButton(Rect rect, Object obj, string content = null)

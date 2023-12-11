@@ -280,13 +280,10 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
     {
         var ev = Event.current;
         Rect fullRect = new Rect(xPos, yPos, columnWidth, rowHeight);
-        Rect shortRect = new Rect(xPos, yPos, columnWidth - rowHeight, rowHeight);
-        Rect pingButtonRect = new Rect(shortRect.xMax, shortRect.yMax - shortRect.height, shortRect.height, shortRect.height);
         bool isSelected = Selection.objects.Contains(obj);
-        bool isHover = fullRect.Contains(ev.mousePosition);
-        bool isShortRectHover = shortRect.Contains(ev.mousePosition);
 
-        if (DrawObjectRow(fullRect, pingButtonRect, obj, isHover, isSelected, false, pingButtonContent))
+        var buttonResult = DrawObjectRow(fullRect, obj, isSelected, false, pingButtonContent);
+        if (buttonResult.pingButtonClicked)
         {
             if (Event.current.button == 0)
                 PingButtonLeftClick(obj);
@@ -296,7 +293,7 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
                 PingButtonMiddleClick(obj);
         }
 
-        if (isShortRectHover)
+        if (buttonResult.isShortRectHovered)
         {
             if (ev.type == EventType.MouseUp && ev.button == 0 && ev.clickCount == 1) // Select on MouseUp
             {
@@ -318,7 +315,7 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
                 ContextClick(new Rect(ev.mousePosition.x, ev.mousePosition.y, 0, 0), obj);
             }
         }
-        return isHover;
+        return buttonResult.isHovered;
     }
 
     private void LeftMouseUp(Object obj, bool isSelected, int i)

@@ -107,17 +107,15 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
             }
 
             Rect fullRect = new Rect(xPos, yPos, columnWidth, rowHeight);
-            Rect shortRect = new Rect(xPos, yPos, columnWidth - rowHeight, rowHeight);
-            Rect pingButtonRect = new Rect(shortRect.xMax, shortRect.yMax - shortRect.height, shortRect.height, shortRect.height);
             bool isSelected = Selection.objects.Contains(obj);
             bool isPinned = pinned.Contains(obj);
-            bool isHover = fullRect.Contains(ev.mousePosition);
-            bool isShortRectHover = shortRect.Contains(ev.mousePosition);
-            if (isHover) isAnyHover = true;
-            if (isShortRectHover) isAnyShortRectHover = true;
-            if (isHover) hoverObject = obj;
 
-            if (DrawObjectRow(fullRect, pingButtonRect, obj, isHover, isSelected, isPinned))
+            var buttonResult = DrawObjectRow(fullRect, obj, isSelected, isPinned);
+
+            if (buttonResult.isHovered) isAnyHover = true;
+            if (buttonResult.isHovered) hoverObject = obj;
+            if (buttonResult.isShortRectHovered) isAnyShortRectHover = true;
+            if (buttonResult.pingButtonClicked)
             {
                 if (Event.current.button == 0)
                     PingButtonLeftClick(obj);
@@ -128,7 +126,7 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
                         shouldLimitAndOrderHistory = true;
             }
 
-            if (isShortRectHover)
+            if (buttonResult.isShortRectHovered)
             {
                 if (ev.type == EventType.MouseUp && ev.button == 0 &&  ev.clickCount == 1)
                 {
@@ -205,7 +203,7 @@ public class AssetsHistory : EditorWindow, IHasCustomMenu
                 }
             }
             // Draw insertion line
-            if (isShortRectHover && isPinned && DragAndDrop.visualMode != DragAndDropVisualMode.None)
+            if (buttonResult.isShortRectHovered && isPinned && DragAndDrop.visualMode != DragAndDropVisualMode.None)
             {
                 DrawDragInsertionLine(fullRect);
             }
