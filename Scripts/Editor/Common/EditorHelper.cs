@@ -149,6 +149,12 @@ public class EditorHelper
             }
         };
     }
+
+    public static void OpenObject(Object obj)
+    {
+        if (IsAsset(obj)) AssetDatabase.OpenAsset(obj);
+        else if (IsNonAssetGameObject(obj)) SceneView.lastActiveSceneView.FrameSelected();
+    }
     #endregion
 
     #region Helpers

@@ -369,8 +369,7 @@ public class AssetDependencies : MyEditorWindow, IHasCustomMenu
 
     private void DoubleClick(Object obj)
     {
-        if (IsAsset(obj)) AssetDatabase.OpenAsset(obj);
-        else if (IsNonAssetGameObject(obj)) SceneView.lastActiveSceneView.FrameSelected();
+        OpenObject(obj);
     }
 
     // This is different event then context click, bot are executed, context after right click
@@ -432,7 +431,7 @@ public class AssetDependencies : MyEditorWindow, IHasCustomMenu
         {
             var objs = shownItems.Where(x => Selection.objects.Contains(x));
             foreach (var obj in objs)
-                DoubleClick(obj);
+                OpenObject(obj);
             ev.Use();
         }
     }

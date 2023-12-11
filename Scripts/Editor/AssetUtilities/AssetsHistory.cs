@@ -259,8 +259,7 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
 
     private void DoubleClick(Object obj)
     {
-        if (IsAsset(obj)) AssetDatabase.OpenAsset(obj);
-        else if (IsNonAssetGameObject(obj)) SceneView.lastActiveSceneView.FrameSelected();
+        OpenObject(obj);
     }
 
     // This is different event then context click, bot are executed, context after right click
