@@ -80,8 +80,9 @@ public class FindAssetUsages : EditorWindow
     public static List<Object> FindAssetUsage(string assetGuid)
     {
         string assetPath = AssetDatabase.GUIDToAssetPath(assetGuid);
-        return SearchService.Request($"ref={assetPath}", SearchFlags.Synchronous).Fetch()
+        var result = SearchService.Request($"ref={assetPath}", SearchFlags.Synchronous).Fetch()
             .Select(x => x.ToObject()).ToList();
+        return result;
     }
 
     //private async Task FindAssetUsage(string assetGuid)

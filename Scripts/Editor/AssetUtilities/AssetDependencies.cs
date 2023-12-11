@@ -10,7 +10,7 @@ using static MyGUI;
 
 public class AssetDependencies : EditorWindow, IHasCustomMenu
 {
-    private const int rowHeight = 16;
+    private const int rowHeight = objectRowHeight;
     private static class Styles
     {
         public static GUIStyle foldoutStyle = new GUIStyle();
@@ -183,7 +183,8 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
                 var obj = allItems[i];
                 if (obj == null) continue;
 
-                AddRow(i, obj, xPos, yPos, columnWidth, ref isAnyHover);
+                var isHover = ObjectRow(i, obj, xPos, yPos, columnWidth);
+                if (isHover) { isAnyHover = true; hoverObject = obj; }
                 yPos += rowHeight;
                 i++;
             }
@@ -203,7 +204,8 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
 
                 string pingButtonContent = usesPaths.Contains(allItemsPaths[i]) ? "U" : "";
                 pingButtonContent = usedByPaths.Contains(allItemsPaths[i]) ? "I" : "" + pingButtonContent;
-                AddRow(i, obj, xPos, yPos, columnWidth, ref isAnyHover, pingButtonContent);
+                var isHover = ObjectRow(i, obj, xPos, yPos, columnWidth, pingButtonContent);
+                if (isHover) { isAnyHover = true; hoverObject = obj; }
                 yPos += rowHeight;
                 i++;
             }
@@ -219,7 +221,8 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
                 var obj = allItems[i];
                 if (obj == null) continue;
 
-                AddRow(i, obj, xPos, yPos, columnWidth, ref isAnyHover);
+                var isHover = ObjectRow(i, obj, xPos, yPos, columnWidth);
+                if (isHover) { isAnyHover = true; hoverObject = obj; }
                 yPos += rowHeight;
                 i++;
             }
@@ -234,7 +237,8 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
                 var obj = allItems[i];
                 if (obj == null) continue;
 
-                AddRow(i, obj, xPos, yPos, columnWidth, ref isAnyHover);
+                var isHover = ObjectRow(i, obj, xPos, yPos, columnWidth);
+                if (isHover) { isAnyHover = true; hoverObject = obj; }
                 yPos += rowHeight;
                 i++;
             }
@@ -250,7 +254,8 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
                 var obj = allItems[i];
                 if (obj == null) continue;
 
-                AddRow(i, obj, xPos, yPos, columnWidth, ref isAnyHover);
+                var isHover = ObjectRow(i, obj, xPos, yPos, columnWidth);
+                if (isHover) { isAnyHover = true; hoverObject = obj; }
                 yPos += rowHeight;
                 i++;
             }
@@ -270,8 +275,8 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
         }
     }
 
-    private void AddRow(int i, Object obj,
-        float xPos, float yPos, float columnWidth, ref bool isAnyHover, string pingButtonContent = null)
+    private bool ObjectRow(int i, Object obj,
+        float xPos, float yPos, float columnWidth, string pingButtonContent = null)
     {
         var ev = Event.current;
         Rect fullRect = new Rect(xPos, yPos, columnWidth, rowHeight);
@@ -280,8 +285,6 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
         bool isSelected = Selection.objects.Contains(obj);
         bool isHover = fullRect.Contains(ev.mousePosition);
         bool isShortRectHover = shortRect.Contains(ev.mousePosition);
-        if (isHover) isAnyHover = true;
-        if (isHover) hoverObject = obj;
 
         if (DrawObjectRow(fullRect, pingButtonRect, obj, isHover, isSelected, false, pingButtonContent))
         {
@@ -315,6 +318,7 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
                 ContextClick(new Rect(ev.mousePosition.x, ev.mousePosition.y, 0, 0), obj);
             }
         }
+        return isHover;
     }
 
     private void LeftMouseUp(Object obj, bool isSelected, int i)
