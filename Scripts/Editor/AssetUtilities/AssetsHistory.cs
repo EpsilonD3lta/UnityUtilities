@@ -356,10 +356,11 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
             Selection.objects = new Object[] { groupedHistory[selectIndex] };
             ev.Use();
         }
-        else if (ev.keyCode == KeyCode.Return)
+        else if (ev.keyCode == KeyCode.Return || ev.keyCode == KeyCode.KeypadEnter)
         {
-            var obj = history.FirstOrDefault(x => Selection.objects.Contains(x));
-            DoubleClick(obj);
+            var objs = groupedHistory.Where(x => Selection.objects.Contains(x));
+            foreach (var obj in objs)
+                DoubleClick(obj);
             ev.Use();
         }
         else if (ev.keyCode == KeyCode.Delete)

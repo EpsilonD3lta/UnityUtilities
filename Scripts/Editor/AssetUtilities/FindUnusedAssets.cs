@@ -36,7 +36,10 @@ public class FindUnusedAssets : EditorWindow
         var assetPaths = AssetDatabase.GetAllAssetPaths().Where(x => x.StartsWith("Assets/" + window.subfolder)
             && !AssetDatabase.IsValidFolder(x));
         assetPaths = assetPaths.Where(x => !x.Contains("/Resources/") &&
-            !x.Contains("/Editor/") && !x.Contains("/Plugins/") && !x.Contains("StreamingAssets"));
+            !x.Contains("/Editor/") && !x.Contains("/Plugins/") && !x.Contains("/StreamingAssets/") &&
+            !x.Contains("/Addressables/") && !x.Contains("/External/") && !x.Contains("/ExternalAssets/")
+            && !x.Contains("/IgnoreSCM/") && !x.Contains("/AddressableAssetsData/") && !x.Contains("/FacebookSDK/")
+            && !x.Contains("/GoogleMobileAds/") && !x.Contains("/GooglePlayGames/"));
         assetPaths = assetPaths.Where(x => !Regex.IsMatch(x, $"\\.({string.Join("|", excludedExtensions)})$"));
 
         // Do not check scripts that do not contain class derived from UnityEngine.Object

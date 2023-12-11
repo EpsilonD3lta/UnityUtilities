@@ -57,6 +57,18 @@ public class AssetDependencies : MyEditorWindow, IHasCustomMenu
         window = CreateWindow<AssetDependencies>("Asset Dependencies");
         window.minSize = new Vector2(100, rowHeight + 1);
 
+        Select(window);
+        SetAssets(window);
+        window.Show();
+    }
+
+    public virtual void AddItemsToMenu(GenericMenu menu)
+    {
+        menu.AddItem(EditorGUIUtility.TrTextContent("Test"), false, Test);
+    }
+
+    public static void Select(AssetDependencies window)
+    {
         var selectedPaths = Selection.assetGUIDs.Select(x => AssetDatabase.GUIDToAssetPath(x));
         selectedPaths = selectedPaths.OrderBy(x => x, treeViewComparer);
 
@@ -69,15 +81,8 @@ public class AssetDependencies : MyEditorWindow, IHasCustomMenu
 
         window.selectedPaths = selectedPaths.ToList();
         window.selected = selectedPaths.Select(x => AssetDatabase.LoadMainAssetAtPath(x)).ToList();
-
-        SetAssets(window);
         window.lastSelectedIndex = window.selected.Count - 1;
-        window.Show();
-    }
-
-    public virtual void AddItemsToMenu(GenericMenu menu)
-    {
-        menu.AddItem(EditorGUIUtility.TrTextContent("Test"), false, Test);
+        window.searchAgain = true;
     }
 
     public static void SetAssets(AssetDependencies window)
@@ -178,6 +183,12 @@ public class AssetDependencies : MyEditorWindow, IHasCustomMenu
         float headerWidth = 100; float headerHeight = 16;
 
         ToggleHeader(new Rect(xPos, yPos, headerWidth, headerHeight), ref showSelected, "Selected");
+        GUIContent reselectContent = EditorGUIUtility.IconContent("Grid.Default@2x");
+        if (GUI.Button(new Rect(xPos + headerWidth, yPos, 20, headerHeight + 2), reselectContent))
+        {
+            Select(this);
+            SetAssets(this);
+        }
         yPos = 20;
         int i = 0;
         if (showSelected)
@@ -419,8 +430,9 @@ public class AssetDependencies : MyEditorWindow, IHasCustomMenu
         }
         else if (ev.keyCode == KeyCode.Return)
         {
-            var obj = shownItems.FirstOrDefault(x => Selection.objects.Contains(x));
-            DoubleClick(obj);
+            var objs = shownItems.Where(x => Selection.objects.Contains(x));
+            foreach (var obj in objs)
+                DoubleClick(obj);
             ev.Use();
         }
     }
