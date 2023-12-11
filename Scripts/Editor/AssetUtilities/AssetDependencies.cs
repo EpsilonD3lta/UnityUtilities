@@ -123,13 +123,13 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
                 foreach (var selectedGuid in selectedGuids)
                     usedByAll.AddRange(FindAssetUsages.FindAssetUsageFiltered(selectedGuid));
                 window.searchAgain = false;
-                var usedByPaths = usedByAll.Where(x => IsAsset(x)).Select(x => AssetDatabase.GetAssetPath(x)).ToList();
+                window.usedBy = usedByAll.Where(x => IsAsset(x))
+                    .OrderBy(x => AssetDatabase.GetAssetPath(x), treeViewComparer).ToList();
 
-                usedByPaths = usedByPaths.Distinct().OrderBy(x => x, treeViewComparer).ToList();
-                window.usedBy = usedByPaths.Select(x => AssetDatabase.LoadMainAssetAtPath(x)).ToList();
                 if (window.searchInScene)
                     window.usedBy.AddRange(usedByAll.Where(x => !IsAsset(x)));
 
+                window.usedBy = window.usedBy.Distinct().ToList();
                 window.adjustSize = true;
                 window.Repaint();
             }

@@ -97,11 +97,12 @@ public class FindAssetUsages : EditorWindow
     public static List<Object> FindAssetUsageFilteredSorted(string assetGuid)
     {
         var results = FindAssetUsageFiltered(assetGuid);
-        var assetResultsPaths = results.Where(x => IsAsset(x)).Select(x => AssetDatabase.GetAssetPath(x))
-            .OrderBy(x => x, new TreeViewComparer()).ToList();
-        var assetResults = assetResultsPaths.Select(x => AssetDatabase.LoadMainAssetAtPath(x)).ToList();
-        assetResults.AddRange(results.Where(x => !IsAsset(x)));
-        return results;
+        var sortedResults = results.Where(x => IsAsset(x))
+            .OrderBy(x => AssetDatabase.GetAssetPath(x), new TreeViewComparer()).ToList();
+
+        // NonAssets last
+        sortedResults.AddRange(results.Where(x => !IsAsset(x)));
+        return sortedResults;
     }
 
     //private async Task FindAssetUsage(string assetGuid)
