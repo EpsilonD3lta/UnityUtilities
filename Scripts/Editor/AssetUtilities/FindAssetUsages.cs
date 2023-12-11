@@ -82,6 +82,8 @@ public class FindAssetUsages : EditorWindow
         string assetPath = AssetDatabase.GUIDToAssetPath(assetGuid);
         var result = SearchService.Request($"ref={assetPath}", SearchFlags.Synchronous).Fetch()
             .Select(x => x.ToObject()).ToList();
+        result = result.Where(x => EditorHelper.IsAsset(x) ||
+            (EditorHelper.IsNonAssetGameObject(x) && PrefabUtility.IsAnyPrefabInstanceRoot((GameObject)x))).ToList();
         return result;
     }
 

@@ -7,6 +7,7 @@ using UnityEngine;
 using Object = UnityEngine.Object;
 using static EditorHelper;
 using static MyGUI;
+using UnityEditor.PackageManager.UI;
 
 public class AssetDependencies : EditorWindow, IHasCustomMenu
 {
@@ -29,23 +30,24 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
     private Vector2 scroll = Vector2.zero;
     private float scrollViewRectHeight = 100;
 
-    private bool selected = true;
-    private bool sameName = true; // name without file extension
-    private bool containsName = false; // name without file extension
-    private bool uses = true;
-    private bool usedBy = false;
-    private bool recursive = false;
-    private bool packageRecursive = false;
-    private bool packages = false;
+    private bool showSelected = true;
+    private bool showSameName = true; // name without file extension
+    private bool isContainsName = false; // name without file extension
+    private bool showUses = true;
+    private bool isRecursive = false;
+    private bool showUsedBy = false;
+    private bool searchInScene = false;
+    private bool showPackages = false;
+    private bool isPackageRecursive = false;
     private bool searchAgain = true;
 
     private List<string> selectedPaths = new();
-    private List<string> sameNamePaths = new();
-    private List<string> usesPaths = new();
-    private List<string> usedByPaths = new();
-    private List<string> packagesUsesPaths = new();
-    private List<string> allItemsPaths = new();
 
+    private List<Object> selected = new();
+    private List<Object> sameName = new();
+    private List<Object> uses = new();
+    private List<Object> usedBy = new();
+    private List<Object> packagesUses = new();
     private List<Object> allItems = new List<Object>();
     private Object hoverObject;
 
@@ -67,6 +69,7 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
             selectedHierarchy.Select(x => PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(x)));
 
         window.selectedPaths = selectedPaths.ToList();
+        window.selected = selectedPaths.Select(x => AssetDatabase.LoadMainAssetAtPath(x)).ToList();
 
         SetAssets(window);
         window.Show();
@@ -80,12 +83,11 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
     public static void SetAssets(AssetDependencies window)
     {
         var selectedPaths = window.selectedPaths;
-        window.usesPaths = new();
-        var allItemsPaths = new List<string>();
+        var allItems = new List<Object>();
 
-        allItemsPaths.AddRange(selectedPaths);
+        allItems.AddRange(window.selected);
 
-        if (window.sameName)
+        if (window.showSameName)
         {
             var names = selectedPaths.Select(x => Path.GetFileNameWithoutExtension(x));
             var sameNameGuids = names.SelectMany(x => AssetDatabase.FindAssets(x)).Distinct();
@@ -93,26 +95,25 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
                 .Select(x => AssetDatabase.GUIDToAssetPath(x)); // This does Contains
             sameNamePaths = sameNamePaths.Where(x => !x.StartsWith("Packages") && !selectedPaths.Contains(x));
 
-            if (!window.containsName)
+            if (!window.isContainsName)
                 sameNamePaths = sameNamePaths
                     .Where(x => names.Contains(Path.GetFileNameWithoutExtension(x)));
             sameNamePaths = sameNamePaths.OrderBy(x => x, treeViewComparer).ToList();
-            window.sameNamePaths = sameNamePaths.ToList();
-            allItemsPaths.AddRange(sameNamePaths);
+            window.sameName = sameNamePaths.Select(x => AssetDatabase.LoadMainAssetAtPath(x)).ToList();
+            allItems.AddRange(window.sameName);
         }
 
-        if (window.uses)
+        if (window.showUses)
         {
-            var usesPaths = AssetDatabase.GetDependencies(selectedPaths.ToArray(), window.recursive);
+            var usesPaths = AssetDatabase.GetDependencies(selectedPaths.ToArray(), window.isRecursive);
             usesPaths = usesPaths.Where(x => !selectedPaths.Contains(x)).ToArray();
             usesPaths = usesPaths.Where(x => !x.StartsWith("Packages"))
                 .OrderBy(x => x, treeViewComparer).ToArray();
-            window.usesPaths = usesPaths.ToList();
-
-            allItemsPaths.AddRange(usesPaths);
+            window.uses = usesPaths.Select(x => AssetDatabase.LoadMainAssetAtPath(x)).ToList();
+            allItems.AddRange(window.uses);
         }
 
-        if (window.usedBy)
+        if (window.showUsedBy)
         {
             if (window.searchAgain)
             {
@@ -122,27 +123,29 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
                     usedBy.AddRange(FindAssetUsages.FindAssetUsage(selectedGuid));
                 window.searchAgain = false;
                 var usedByPaths = usedBy.Where(x => IsAsset(x)).Select(x => AssetDatabase.GetAssetPath(x)).ToList();
+
                 usedByPaths = usedByPaths.Distinct().OrderBy(x => x, treeViewComparer).ToList();
-                window.usedByPaths = usedByPaths;
+                window.usedBy = usedByPaths.Select(x => AssetDatabase.LoadMainAssetAtPath(x)).ToList();
+                if (window.searchInScene)
+                    window.usedBy.AddRange(usedBy.Where(x => !IsAsset(x)));
+
                 window.adjustSize = true;
                 window.Repaint();
             }
-            allItemsPaths.AddRange(window.usedByPaths);
+            allItems.AddRange(window.usedBy);
         }
 
-        if (window.packages)
+        if (window.showPackages)
         {
-            var packagesUsesPaths = AssetDatabase.GetDependencies(selectedPaths.ToArray(), window.packageRecursive);
+            var packagesUsesPaths = AssetDatabase.GetDependencies(selectedPaths.ToArray(), window.isPackageRecursive);
             packagesUsesPaths = packagesUsesPaths.Where(x => !selectedPaths.Contains(x)).ToArray();
             packagesUsesPaths = packagesUsesPaths.Where(x => x.StartsWith("Packages"))
                 .OrderBy(x => x, treeViewComparer).ToArray();
-            window.packagesUsesPaths = packagesUsesPaths.ToList();
-
-            allItemsPaths.AddRange(packagesUsesPaths);
+            window.packagesUses = packagesUsesPaths.Select(x => AssetDatabase.LoadMainAssetAtPath(x)).ToList();
+            allItems.AddRange(window.packagesUses);
         }
 
-        window.allItemsPaths = allItemsPaths;
-        window.allItems = allItemsPaths.Select(x => AssetDatabase.LoadMainAssetAtPath(x)).ToList();
+        window.allItems = allItems;
     }
 
     private void Test()
@@ -174,12 +177,12 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
         yPos = 0;
         float headerWidth = 100; float headerHeight = 16;
 
-        ToggleHeader(new Rect(xPos, yPos, headerWidth, headerHeight), ref selected, "Selected");
+        ToggleHeader(new Rect(xPos, yPos, headerWidth, headerHeight), ref showSelected, "Selected");
         yPos = 20;
         int i = 0;
-        if (selected)
+        if (showSelected)
         {
-            for (int j = 0; j < selectedPaths.Count; j++)
+            for (int j = 0; j < selected.Count; j++)
             {
                 var obj = allItems[i];
                 if (obj == null) continue;
@@ -190,21 +193,21 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
                 i++;
             }
         }
-        else i = selectedPaths.Count;
+        else i = selected.Count;
 
-        ToggleHeader(new Rect(xPos, yPos, headerWidth, headerHeight), ref sameName, "SameName");
-        AdditionalToggle(new Rect(xPos + headerWidth, yPos, 100, headerHeight + 2), ref containsName, "Contains");
+        ToggleHeader(new Rect(xPos, yPos, headerWidth, headerHeight), ref showSameName, "SameName");
+        AdditionalToggle(new Rect(xPos + headerWidth, yPos, 16, headerHeight + 2), ref isContainsName, "Contains");
 
         yPos += 20;
-        if (sameName)
+        if (showSameName)
         {
-            for (int j = 0; j < sameNamePaths.Count; j++)
+            for (int j = 0; j < sameName.Count; j++)
             {
                 var obj = allItems[i];
                 if (obj == null) continue;
 
-                string pingButtonContent = usesPaths.Contains(allItemsPaths[i]) ? "U" : "";
-                pingButtonContent = usedByPaths.Contains(allItemsPaths[i]) ? "I" : "" + pingButtonContent;
+                string pingButtonContent = uses.Contains(allItems[i]) ? "U" : "";
+                pingButtonContent = usedBy.Contains(allItems[i]) ? "I" : "" + pingButtonContent;
                 var isHover = ObjectRow(i, obj, xPos, yPos, columnWidth, pingButtonContent);
                 if (isHover) { isAnyHover = true; hoverObject = obj; }
                 yPos += rowHeight;
@@ -212,12 +215,12 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
             }
         }
 
-        ToggleHeader(new Rect(xPos, yPos, headerWidth, headerHeight), ref uses, "Uses");
-        AdditionalToggle(new Rect(xPos + headerWidth, yPos, 100, headerHeight + 2), ref recursive, "Recursive");
+        ToggleHeader(new Rect(xPos, yPos, headerWidth, headerHeight), ref showUses, "Uses");
+        AdditionalToggle(new Rect(xPos + headerWidth, yPos, 16, headerHeight + 2), ref isRecursive, "Recursive");
         yPos += 20;
-        if (uses)
+        if (showUses)
         {
-            for (int j = 0; j < usesPaths.Count; j++)
+            for (int j = 0; j < uses.Count; j++)
             {
                 var obj = allItems[i];
                 if (obj == null) continue;
@@ -229,11 +232,19 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
             }
         }
 
-        ToggleHeader(new Rect(xPos, yPos, headerWidth, headerHeight), ref usedBy, "Is Used By");
-        yPos += 20;
-        if (usedBy)
+        ToggleHeader(new Rect(xPos, yPos, headerWidth, headerHeight), ref showUsedBy, "Is Used By");
+        AdditionalToggle(
+            new Rect(xPos + headerWidth, yPos, 16, headerHeight + 2), ref searchInScene, "Search in Scene", true);
+        GUIContent searchContent = EditorGUIUtility.IconContent("Search Icon");
+        if (GUI.Button(new Rect(xPos + headerWidth + 16, yPos, 20, headerHeight + 2), searchContent))
         {
-            for (int j = 0; j < usedByPaths.Count; j++)
+            searchAgain = true;
+            SetAssets(this);
+        }
+        yPos += 20;
+        if (showUsedBy)
+        {
+            for (int j = 0; j < usedBy.Count; j++)
             {
                 var obj = allItems[i];
                 if (obj == null) continue;
@@ -245,12 +256,12 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
             }
         }
 
-        ToggleHeader(new Rect(xPos, yPos, headerWidth, headerHeight), ref packages, "Packages");
-        AdditionalToggle(new Rect(xPos + headerWidth, yPos, 100, headerHeight + 2), ref packageRecursive, "Recursive");
+        ToggleHeader(new Rect(xPos, yPos, headerWidth, headerHeight), ref showPackages, "Packages");
+        AdditionalToggle(new Rect(xPos + headerWidth, yPos, 16, headerHeight + 2), ref isPackageRecursive, "Recursive");
         yPos += 20;
-        if (packages)
+        if (showPackages)
         {
-            for (int j = 0; j < packagesUsesPaths.Count; j++)
+            for (int j = 0; j < packagesUses.Count; j++)
             {
                 var obj = allItems[i];
                 if (obj == null) continue;
@@ -429,12 +440,13 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
         GUI.backgroundColor = oldBackgroundColor;
     }
 
-    private void AdditionalToggle(Rect rect, ref bool selected, string tooltip)
+    private void AdditionalToggle(Rect rect, ref bool value, string tooltip, bool searchAgain = false)
     {
         EditorGUI.BeginChangeCheck();
-        selected = GUI.Toggle(rect, selected, new GUIContent("", tooltip));
+        value = GUI.Toggle(rect, value, new GUIContent("", tooltip));
         if (EditorGUI.EndChangeCheck())
         {
+            if (searchAgain) this.searchAgain = true;
             SetAssets(this);
             adjustSize = true;
         }
