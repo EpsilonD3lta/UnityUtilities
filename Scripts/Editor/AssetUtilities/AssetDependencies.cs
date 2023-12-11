@@ -7,7 +7,6 @@ using UnityEngine;
 using Object = UnityEngine.Object;
 using static EditorHelper;
 using static MyGUI;
-using UnityEditor.PackageManager.UI;
 
 public class AssetDependencies : EditorWindow, IHasCustomMenu
 {
@@ -48,8 +47,9 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
     private List<Object> uses = new();
     private List<Object> usedBy = new();
     private List<Object> packagesUses = new();
-    private List<Object> allItems = new List<Object>();
+    private List<Object> shownItems = new List<Object>();
     private Object hoverObject;
+    private int lastSelectedIndex = -1;
 
     [MenuItem("Window/Asset Dependencies _#F11")]
     private static void CreateWindow()
@@ -72,6 +72,7 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
         window.selected = selectedPaths.Select(x => AssetDatabase.LoadMainAssetAtPath(x)).ToList();
 
         SetAssets(window);
+        window.lastSelectedIndex = window.selected.Count - 1;
         window.Show();
     }
 
@@ -83,9 +84,9 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
     public static void SetAssets(AssetDependencies window)
     {
         var selectedPaths = window.selectedPaths;
-        var allItems = new List<Object>();
+        var shownItems = new List<Object>();
 
-        allItems.AddRange(window.selected);
+        shownItems.AddRange(window.selected);
 
         if (window.showSameName)
         {
@@ -100,7 +101,7 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
                     .Where(x => names.Contains(Path.GetFileNameWithoutExtension(x)));
             sameNamePaths = sameNamePaths.OrderBy(x => x, treeViewComparer).ToList();
             window.sameName = sameNamePaths.Select(x => AssetDatabase.LoadMainAssetAtPath(x)).ToList();
-            allItems.AddRange(window.sameName);
+            shownItems.AddRange(window.sameName);
         }
 
         if (window.showUses)
@@ -110,7 +111,7 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
             usesPaths = usesPaths.Where(x => !x.StartsWith("Packages"))
                 .OrderBy(x => x, treeViewComparer).ToArray();
             window.uses = usesPaths.Select(x => AssetDatabase.LoadMainAssetAtPath(x)).ToList();
-            allItems.AddRange(window.uses);
+            shownItems.AddRange(window.uses);
         }
 
         if (window.showUsedBy)
@@ -118,21 +119,21 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
             if (window.searchAgain)
             {
                 var selectedGuids = selectedPaths.Select(x => AssetDatabase.AssetPathToGUID(x));
-                var usedBy = new List<Object>();
+                var usedByAll = new List<Object>();
                 foreach (var selectedGuid in selectedGuids)
-                    usedBy.AddRange(FindAssetUsages.FindAssetUsage(selectedGuid));
+                    usedByAll.AddRange(FindAssetUsages.FindAssetUsageFiltered(selectedGuid));
                 window.searchAgain = false;
-                var usedByPaths = usedBy.Where(x => IsAsset(x)).Select(x => AssetDatabase.GetAssetPath(x)).ToList();
+                var usedByPaths = usedByAll.Where(x => IsAsset(x)).Select(x => AssetDatabase.GetAssetPath(x)).ToList();
 
                 usedByPaths = usedByPaths.Distinct().OrderBy(x => x, treeViewComparer).ToList();
                 window.usedBy = usedByPaths.Select(x => AssetDatabase.LoadMainAssetAtPath(x)).ToList();
                 if (window.searchInScene)
-                    window.usedBy.AddRange(usedBy.Where(x => !IsAsset(x)));
+                    window.usedBy.AddRange(usedByAll.Where(x => !IsAsset(x)));
 
                 window.adjustSize = true;
                 window.Repaint();
             }
-            allItems.AddRange(window.usedBy);
+            shownItems.AddRange(window.usedBy);
         }
 
         if (window.showPackages)
@@ -142,10 +143,10 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
             packagesUsesPaths = packagesUsesPaths.Where(x => x.StartsWith("Packages"))
                 .OrderBy(x => x, treeViewComparer).ToArray();
             window.packagesUses = packagesUsesPaths.Select(x => AssetDatabase.LoadMainAssetAtPath(x)).ToList();
-            allItems.AddRange(window.packagesUses);
+            shownItems.AddRange(window.packagesUses);
         }
 
-        window.allItems = allItems;
+        window.shownItems = shownItems;
     }
 
     private void Test()
@@ -184,7 +185,7 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
         {
             for (int j = 0; j < selected.Count; j++)
             {
-                var obj = allItems[i];
+                var obj = shownItems[i];
                 if (obj == null) continue;
 
                 var isHover = ObjectRow(i, obj, xPos, yPos, columnWidth);
@@ -203,11 +204,11 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
         {
             for (int j = 0; j < sameName.Count; j++)
             {
-                var obj = allItems[i];
+                var obj = shownItems[i];
                 if (obj == null) continue;
 
-                string pingButtonContent = uses.Contains(allItems[i]) ? "U" : "";
-                pingButtonContent = usedBy.Contains(allItems[i]) ? "I" : "" + pingButtonContent;
+                string pingButtonContent = uses.Contains(shownItems[i]) ? "U" : "";
+                pingButtonContent = usedBy.Contains(shownItems[i]) ? "I" : "" + pingButtonContent;
                 var isHover = ObjectRow(i, obj, xPos, yPos, columnWidth, pingButtonContent);
                 if (isHover) { isAnyHover = true; hoverObject = obj; }
                 yPos += rowHeight;
@@ -222,7 +223,7 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
         {
             for (int j = 0; j < uses.Count; j++)
             {
-                var obj = allItems[i];
+                var obj = shownItems[i];
                 if (obj == null) continue;
 
                 var isHover = ObjectRow(i, obj, xPos, yPos, columnWidth);
@@ -246,7 +247,7 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
         {
             for (int j = 0; j < usedBy.Count; j++)
             {
-                var obj = allItems[i];
+                var obj = shownItems[i];
                 if (obj == null) continue;
 
                 var isHover = ObjectRow(i, obj, xPos, yPos, columnWidth);
@@ -263,7 +264,7 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
         {
             for (int j = 0; j < packagesUses.Count; j++)
             {
-                var obj = allItems[i];
+                var obj = shownItems[i];
                 if (obj == null) continue;
 
                 var isHover = ObjectRow(i, obj, xPos, yPos, columnWidth);
@@ -319,7 +320,7 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
             }
             else if (ev.type == EventType.MouseDown && ev.button == 1)
             {
-                RightClick(obj);
+                RightClick(obj, i);
                 ev.Use();
             }
             else if (ev.type == EventType.ContextClick)
@@ -333,18 +334,19 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
     private void LeftMouseUp(Object obj, bool isSelected, int i)
     {
         var ev = Event.current;
+        lastSelectedIndex = i;
         if (ev.modifiers == EventModifiers.Control) // Ctrl select
             if (!isSelected) Selection.objects = Selection.objects.Append(obj).ToArray();
             else Selection.objects = Selection.objects.Where(x => x != obj).ToArray();
         else if (ev.modifiers == EventModifiers.Shift) // Shift select
         {
-            int firstSelected = allItems.FindIndex(x => Selection.objects.Contains(x));
+            int firstSelected = shownItems.FindIndex(x => Selection.objects.Contains(x));
             if (firstSelected != -1)
             {
                 int startIndex = Mathf.Min(firstSelected + 1, i);
                 int count = Mathf.Abs(firstSelected - i);
                 Selection.objects = Selection.objects.
-                    Concat(allItems.GetRange(startIndex, count)).Distinct().ToArray();
+                    Concat(shownItems.GetRange(startIndex, count)).Distinct().ToArray();
             }
             else Selection.objects = Selection.objects.Append(obj).ToArray();
         }
@@ -362,8 +364,9 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
     }
 
     // This is different event then context click, bot are executed, context after right click
-    private void RightClick(Object obj)
+    private void RightClick(Object obj, int i)
     {
+        lastSelectedIndex = i;
         Selection.activeObject = obj;
     }
 
@@ -405,21 +408,19 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
     {
         if (ev.keyCode == KeyCode.DownArrow)
         {
-            int lastHighlightedIndex = allItems.FindLastIndex(x => Selection.objects.Contains(x));
-            int selectIndex = Mod(lastHighlightedIndex + 1, allItems.Count);
-            Selection.objects = new Object[] { allItems[selectIndex] };
+            lastSelectedIndex = Mod(lastSelectedIndex + 1, shownItems.Count);
+            Selection.objects = new Object[] { shownItems[lastSelectedIndex] };
             ev.Use();
         }
         else if (ev.keyCode == KeyCode.UpArrow)
         {
-            int lastHighlightedIndex = allItems.FindIndex(x => Selection.objects.Contains(x));
-            int selectIndex = Mod(lastHighlightedIndex - 1, allItems.Count);
-            Selection.objects = new Object[] { allItems[selectIndex] };
+            lastSelectedIndex = Mod(lastSelectedIndex - 1, shownItems.Count);
+            Selection.objects = new Object[] { shownItems[lastSelectedIndex] };
             ev.Use();
         }
         else if (ev.keyCode == KeyCode.Return)
         {
-            var obj = allItems.FirstOrDefault(x => Selection.objects.Contains(x));
+            var obj = shownItems.FirstOrDefault(x => Selection.objects.Contains(x));
             DoubleClick(obj);
             ev.Use();
         }

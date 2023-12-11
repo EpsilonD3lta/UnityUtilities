@@ -3,6 +3,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEditor.Search;
 using UnityEngine;
+using static EditorHelper;
 
 public class FindAssetUsages : EditorWindow
 {
@@ -24,7 +25,7 @@ public class FindAssetUsages : EditorWindow
         }
 
         window.selectedAssetGuid = assetGuids[0];
-        window.assets = FindAssetUsage(window.selectedAssetGuid);
+        window.assets = FindAssetUsageFilteredSorted(window.selectedAssetGuid);
     }
 
     private void OnGUI()
@@ -55,7 +56,7 @@ public class FindAssetUsages : EditorWindow
         if (GUILayout.Button(searchContent, GUILayout.MaxWidth(40), GUILayout.MaxHeight(18)))
         {
             if (!string.IsNullOrEmpty(selectedAssetGuid))
-                assets = FindAssetUsage(selectedAssetGuid);
+                assets = FindAssetUsageFilteredSorted(selectedAssetGuid);
         }
         GUILayout.EndHorizontal();
         EditorGUILayout.Space();
@@ -80,11 +81,27 @@ public class FindAssetUsages : EditorWindow
     public static List<Object> FindAssetUsage(string assetGuid)
     {
         string assetPath = AssetDatabase.GUIDToAssetPath(assetGuid);
-        var result = SearchService.Request($"ref={assetPath}", SearchFlags.Synchronous).Fetch()
+        var results = SearchService.Request($"ref={assetPath}", SearchFlags.Synchronous).Fetch()
             .Select(x => x.ToObject()).ToList();
-        result = result.Where(x => EditorHelper.IsAsset(x) ||
-            (EditorHelper.IsNonAssetGameObject(x) && PrefabUtility.IsAnyPrefabInstanceRoot((GameObject)x))).ToList();
-        return result;
+        return results;
+    }
+
+    public static List<Object> FindAssetUsageFiltered(string assetGuid)
+    {
+        var results = FindAssetUsage(assetGuid);
+        results = results.Where(x => IsAsset(x) ||
+            (IsNonAssetGameObject(x) && PrefabUtility.IsAnyPrefabInstanceRoot((GameObject)x))).ToList();
+        return results;
+    }
+
+    public static List<Object> FindAssetUsageFilteredSorted(string assetGuid)
+    {
+        var results = FindAssetUsageFiltered(assetGuid);
+        var assetResultsPaths = results.Where(x => IsAsset(x)).Select(x => AssetDatabase.GetAssetPath(x))
+            .OrderBy(x => x, new TreeViewComparer()).ToList();
+        var assetResults = assetResultsPaths.Select(x => AssetDatabase.LoadMainAssetAtPath(x)).ToList();
+        assetResults.AddRange(results.Where(x => !IsAsset(x)));
+        return results;
     }
 
     //private async Task FindAssetUsage(string assetGuid)
