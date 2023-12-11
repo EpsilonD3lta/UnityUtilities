@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices.Expando;
+using System.Xml.Xsl;
 using UnityEditor;
 using UnityEditor.ShortcutManagement;
 using UnityEditorInternal;
@@ -196,7 +197,13 @@ public class EditorHelper
 
     public static bool ArePartOfSameMainAssets(Object asset1, Object asset2)
     {
-         return AssetDatabase.GetAssetPath(asset1) == AssetDatabase.GetAssetPath(asset2);
+        return AssetDatabase.GetAssetPath(asset1) == AssetDatabase.GetAssetPath(asset2);
+    }
+
+    public static string GetGuid(Object obj)
+    {
+        if (!IsAsset(obj)) throw new ArgumentException();
+        return AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(obj));
     }
 
     /// <summary>

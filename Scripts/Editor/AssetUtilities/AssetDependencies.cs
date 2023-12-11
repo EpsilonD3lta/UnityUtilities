@@ -58,7 +58,7 @@ public class AssetDependencies : MyEditorWindow, IHasCustomMenu
         window.minSize = new Vector2(100, rowHeight + 1);
 
         Select(window);
-        SetAssets(window);
+        SetShownItems(window);
         window.Show();
     }
 
@@ -85,7 +85,7 @@ public class AssetDependencies : MyEditorWindow, IHasCustomMenu
         window.searchAgain = true;
     }
 
-    public static void SetAssets(AssetDependencies window)
+    public static void SetShownItems(AssetDependencies window)
     {
         var selectedPaths = window.selectedPaths;
         var shownItems = new List<Object>();
@@ -125,7 +125,7 @@ public class AssetDependencies : MyEditorWindow, IHasCustomMenu
                 var selectedGuids = selectedPaths.Select(x => AssetDatabase.AssetPathToGUID(x));
                 var usedByAll = new List<Object>();
                 foreach (var selectedGuid in selectedGuids)
-                    usedByAll.AddRange(FindAssetUsages.FindAssetUsageFiltered(selectedGuid));
+                    usedByAll.AddRange(FindAssetUsages.FindAssetUsage(selectedGuid, true));
                 window.searchAgain = false;
                 window.usedBy = usedByAll.Where(x => IsAsset(x))
                     .OrderBy(x => AssetDatabase.GetAssetPath(x), treeViewComparer).ToList();
@@ -134,8 +134,6 @@ public class AssetDependencies : MyEditorWindow, IHasCustomMenu
                     window.usedBy.AddRange(usedByAll.Where(x => !IsAsset(x)));
 
                 window.usedBy = window.usedBy.Distinct().ToList();
-                window.adjustSize = true;
-                window.Repaint();
             }
             shownItems.AddRange(window.usedBy);
         }
@@ -187,7 +185,7 @@ public class AssetDependencies : MyEditorWindow, IHasCustomMenu
         if (GUI.Button(new Rect(xPos + headerWidth, yPos, 20, headerHeight + 2), reselectContent))
         {
             Select(this);
-            SetAssets(this);
+            SetShownItems(this);
         }
         yPos = 20;
         int i = 0;
@@ -250,7 +248,7 @@ public class AssetDependencies : MyEditorWindow, IHasCustomMenu
         if (GUI.Button(new Rect(xPos + headerWidth + 16, yPos, 20, headerHeight + 2), searchContent))
         {
             searchAgain = true;
-            SetAssets(this);
+            SetShownItems(this);
         }
         yPos += 20;
         if (showUsedBy)
@@ -445,7 +443,7 @@ public class AssetDependencies : MyEditorWindow, IHasCustomMenu
         selected = GUI.Toggle(rect, selected, text, Styles.foldoutStyle);
         if (EditorGUI.EndChangeCheck())
         {
-            SetAssets(this);
+            SetShownItems(this);
             adjustSize = true;
         }
         GUI.backgroundColor = oldBackgroundColor;
@@ -458,7 +456,7 @@ public class AssetDependencies : MyEditorWindow, IHasCustomMenu
         if (EditorGUI.EndChangeCheck())
         {
             if (searchAgain) this.searchAgain = true;
-            SetAssets(this);
+            SetShownItems(this);
             adjustSize = true;
         }
     }

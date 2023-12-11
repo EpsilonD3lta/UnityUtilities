@@ -7,8 +7,10 @@ using static EditorHelper;
 
 public class FindAssetUsages : EditorWindow
 {
-    private List<Object> assets = new();
-    private string selectedAssetGuid;
+    private static TreeViewComparer treeViewComparer = new();
+
+    private List<Object> usedByObjects = new();
+    private Object selectedObject;
     private Vector2 scroll = Vector2.zero;
 
     [MenuItem("Assets/Find Asset Usage _#F12")]
@@ -17,46 +19,20 @@ public class FindAssetUsages : EditorWindow
         var window = CreateWindow<FindAssetUsages>();
         window.Show();
 
-        string[] assetGuids = Selection.assetGUIDs;
-        if (assetGuids.Length == 0)
-        {
-            Debug.Log("Cannot find asset usages when no assets are selected.");
-            return;
-        }
+        if (Selection.objects.Length > 0)
+            window.selectedObject = Selection.objects[0];
 
-        window.selectedAssetGuid = assetGuids[0];
-        window.assets = FindAssetUsageFilteredSorted(window.selectedAssetGuid);
+        window.usedByObjects = FindObjectUsage(window.selectedObject, true, true);
     }
 
     private void OnGUI()
     {
-        if (selectedAssetGuid == null)
-        {
-            EditorGUILayout.LabelField("Right click on an Asset and select 'Find Asset Usages'");
-            return;
-        }
-        string searchedAssetFilename = AssetDatabase.GUIDToAssetPath(selectedAssetGuid);
-        if (searchedAssetFilename == null)
-        {
-            EditorGUILayout.LabelField("Right click on an Asset and select 'Find Asset Usages'");
-            return;
-        }
-
-        var searchedAsset = AssetDatabase.LoadAssetAtPath<Object>(searchedAssetFilename);
-        if (searchedAsset == null)
-        {
-            EditorGUILayout.LabelField("Right click on an Asset and select 'Find Asset Usages'");
-            return;
-        }
-
-        EditorGUILayout.LabelField(searchedAssetFilename);
         GUILayout.BeginHorizontal();
-        EditorGUILayout.ObjectField(searchedAsset, searchedAsset.GetType(), true);
+        EditorGUILayout.ObjectField(selectedObject, selectedObject.GetType(), true);
         GUIContent searchContent = EditorGUIUtility.IconContent("Search Icon");
         if (GUILayout.Button(searchContent, GUILayout.MaxWidth(40), GUILayout.MaxHeight(18)))
         {
-            if (!string.IsNullOrEmpty(selectedAssetGuid))
-                assets = FindAssetUsageFilteredSorted(selectedAssetGuid);
+            usedByObjects = FindObjectUsage(selectedObject, false, true);
         }
         GUILayout.EndHorizontal();
         EditorGUILayout.Space();
@@ -65,7 +41,7 @@ public class FindAssetUsages : EditorWindow
         EditorGUILayout.Space();
 
         scroll = EditorGUILayout.BeginScrollView(scroll);
-        foreach (var asset in assets)
+        foreach (var asset in usedByObjects)
         {
             EditorGUILayout.LabelField(AssetDatabase.GetAssetPath(asset));
             if (asset != null)
@@ -78,32 +54,80 @@ public class FindAssetUsages : EditorWindow
         EditorGUILayout.EndScrollView();
     }
 
-    public static List<Object> FindAssetUsage(string assetGuid)
+    public static List<Object> FindObjectUsage(Object go, bool filtered = false, bool sorted = false)
+    {
+        var results = new List<Object>();
+        if (IsAsset(go))
+        {
+            results = FindAssetUsage(GetGuid(go), filtered, sorted);
+        }
+        else if (IsNonAssetGameObject(go))
+        {
+            results = FindGameObjectUsage((GameObject)go);
+        }
+        return results;
+    }
+
+    public static List<Object> FindAssetUsage(string assetGuid, bool filtered = false, bool sorted = false)
     {
         var assetPath = AssetDatabase.GUIDToAssetPath(assetGuid);
         var asset = AssetDatabase.LoadMainAssetAtPath(assetPath);
         var results = SearchService.Request($"ref={assetPath}", SearchFlags.Synchronous).Fetch()
             .Select(x => x.ToObject()).Where(x => !ArePartOfSameMainAssets(x, asset)).ToList();
+
+        if (filtered) results = FilterResults(results);
+        if (sorted) results = SortResults(results);
         return results;
     }
 
-    public static List<Object> FindAssetUsageFiltered(string assetGuid)
+    // Without IsAnyPrefabInstanceRoot, results contain every childGameobject
+    public static List<Object> FilterResults(List<Object> results)
     {
-        var results = FindAssetUsage(assetGuid);
-        results = results.Where(x => IsAsset(x) ||
-            (IsNonAssetGameObject(x) && PrefabUtility.IsAnyPrefabInstanceRoot((GameObject)x))).ToList();
-        return results;
+        var filteredResults = new List<Object>();
+        foreach (var obj in results)
+        {
+            if (IsAsset(obj))
+            {
+                filteredResults.Add(obj);
+                continue;
+            }
+            if (IsNonAssetGameObject(obj))
+            {
+                var go = obj as GameObject;
+                if (!PrefabUtility.IsPartOfAnyPrefab(go))
+                {
+                    filteredResults.Add(go);
+                    continue;
+                }
+                if (PrefabUtility.IsAnyPrefabInstanceRoot(go))
+                {
+                    filteredResults.Add(go);
+                    continue;
+                }
+                var root = PrefabUtility.GetNearestPrefabInstanceRoot(go);
+                if (!results.Contains(root))
+                    filteredResults.Add(go);
+            }
+        }
+        return filteredResults;
     }
 
-    public static List<Object> FindAssetUsageFilteredSorted(string assetGuid)
+    // Sort as treeView, NonAssets last
+    public static List<Object> SortResults(List<Object> results)
     {
-        var results = FindAssetUsageFiltered(assetGuid);
         var sortedResults = results.Where(x => IsAsset(x))
-            .OrderBy(x => AssetDatabase.GetAssetPath(x), new TreeViewComparer()).ToList();
+            .OrderBy(x => AssetDatabase.GetAssetPath(x), treeViewComparer).ToList();
 
         // NonAssets last
         sortedResults.AddRange(results.Where(x => !IsAsset(x)));
         return sortedResults;
+    }
+
+    public static List<Object> FindGameObjectUsage(GameObject go)
+    {
+        var results = SearchService.Request($"ref={go.GetInstanceID()}", SearchFlags.Synchronous).Fetch()
+            .Select(x => x.ToObject()).ToList();
+        return results;
     }
 
     //private async Task FindAssetUsage(string assetGuid)

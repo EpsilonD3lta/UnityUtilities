@@ -16,7 +16,6 @@ public class FindUnusedAssets : EditorWindow
 
     private string subfolder = "";
     private bool canceled = false;
-    private float progress = 0;
     private List<Object> unusedAssets = new();
     private Vector2 scroll = Vector2.zero;
 
@@ -39,7 +38,8 @@ public class FindUnusedAssets : EditorWindow
             !x.Contains("/Editor/") && !x.Contains("/Plugins/") && !x.Contains("/StreamingAssets/") &&
             !x.Contains("/Addressables/") && !x.Contains("/External/") && !x.Contains("/ExternalAssets/")
             && !x.Contains("/IgnoreSCM/") && !x.Contains("/AddressableAssetsData/") && !x.Contains("/FacebookSDK/")
-            && !x.Contains("/GoogleMobileAds/") && !x.Contains("/GooglePlayGames/"));
+            && !x.Contains("/GoogleMobileAds/") && !x.Contains("/GooglePlayGames/")
+            && !x.Contains("/Settings/"));
         assetPaths = assetPaths.Where(x => !Regex.IsMatch(x, $"\\.({string.Join("|", excludedExtensions)})$"));
 
         // Do not check scripts that do not contain class derived from UnityEngine.Object
@@ -63,12 +63,14 @@ public class FindUnusedAssets : EditorWindow
 
         int total = assetPaths.Count();
         int current = 0;
+        float progress = 0;
         foreach (var assetPath in assetPaths)
         {
             current++;
-            window.progress = current / (float)total;
+            progress = current / (float)total;
 
-            if (window.canceled || EditorUtility.DisplayCancelableProgressBar("Searching...", $"Canceled", window.progress))
+            if (window.canceled || EditorUtility.DisplayCancelableProgressBar(
+                $"Searching... {current}/{total}", $"Canceled", progress))
             {
                 EditorUtility.ClearProgressBar();
                 return;
@@ -87,8 +89,8 @@ public class FindUnusedAssets : EditorWindow
     /// <summary> Tries to find any asset usage. If one is found, returns true </summary>
     private static bool FindAnyAssetUsage(string guid)
     {
-        var usedIn = FindAssetUsages.FindAssetUsage(guid);
-        return usedIn.Any();
+        var usedBy = FindAssetUsages.FindAssetUsage(guid);
+        return usedBy.Any();
     }
 
     private void OnGUI()
