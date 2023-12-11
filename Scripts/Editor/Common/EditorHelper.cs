@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices.Expando;
 using UnityEditor;
 using UnityEditor.ShortcutManagement;
 using UnityEditorInternal;
@@ -91,9 +92,62 @@ public class EditorHelper
             var changeGoldingMethod =
                 treeViewControllerType.GetMethod("ChangeFolding", BindingFlags.Instance | BindingFlags.NonPublic);
             changeGoldingMethod.Invoke(treeViewController, new object[] { new int[] { instanceID }, expand });
-            EditorWindow pw = (EditorWindow)p as EditorWindow;
+            EditorWindow pw = (EditorWindow)p;
             pw.Repaint();
         }
+    }
+
+    [Shortcut("Lock Inspector", KeyCode.C, ShortcutModifiers.Alt)]
+    public static void ToggleInspectorLock()
+    {
+        ActiveEditorTracker.sharedTracker.isLocked = !ActiveEditorTracker.sharedTracker.isLocked;
+        ActiveEditorTracker.sharedTracker.ForceRebuild();
+    }
+
+    [Shortcut("Lock Project Tab", KeyCode.V, ShortcutModifiers.Alt)]
+    public static void ToggleProjectTabLock()
+    {
+        var unityEditorAssembly = Assembly.GetAssembly(typeof(Editor));
+        var projectBrowserType = unityEditorAssembly.GetType("UnityEditor.ProjectBrowser");
+        var projectBrowsers = Resources.FindObjectsOfTypeAll(projectBrowserType);
+        var isLockedProperty = projectBrowserType.GetProperty("isLocked", BindingFlags.Instance | BindingFlags.NonPublic);
+
+        foreach (var p in projectBrowsers)
+        {
+            var isLockedOldValue = (bool)isLockedProperty.GetValue(p);
+            isLockedProperty.SetValue(p, !isLockedOldValue);
+
+            EditorWindow pw = (EditorWindow)p;
+            pw.Repaint();
+        }
+    }
+
+    public static void SelectWithoutFocus(params Object[] objects)
+    {
+        var unityEditorAssembly = Assembly.GetAssembly(typeof(Editor));
+        var projectBrowserType = unityEditorAssembly.GetType("UnityEditor.ProjectBrowser");
+        var projectBrowsers = Resources.FindObjectsOfTypeAll(projectBrowserType);
+        var isLockedProperty = projectBrowserType.GetProperty("isLocked", BindingFlags.Instance | BindingFlags.NonPublic);
+        var oldValues = new List<bool>();
+        foreach (var p in projectBrowsers)
+        {
+            oldValues.Add((bool)isLockedProperty.GetValue(p));
+            isLockedProperty.SetValue(p, true);
+            EditorWindow pw = (EditorWindow)p;
+            pw.Repaint();
+        }
+        Selection.objects = objects;
+        EditorApplication.delayCall += () =>
+        {
+            for (int i = 0; i < projectBrowsers.Length; i++)
+            {
+                var p = projectBrowsers[i];
+                isLockedProperty.SetValue(p, oldValues[i]);
+
+                EditorWindow pw = (EditorWindow)p;
+                pw.Repaint();
+            }
+        };
     }
     #endregion
 
