@@ -134,6 +134,11 @@ public class EditorHelper
         return false;
     }
 
+    public static bool ArePartOfSameMainAssets(Object asset1, Object asset2)
+    {
+         return AssetDatabase.GetAssetPath(asset1) == AssetDatabase.GetAssetPath(asset2);
+    }
+
     /// <summary>
     /// Orders string paths in the same order as in Project Tab. Folders are first at the same level of depth
     /// </summary>

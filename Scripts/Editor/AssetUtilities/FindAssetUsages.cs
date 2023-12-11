@@ -80,9 +80,10 @@ public class FindAssetUsages : EditorWindow
 
     public static List<Object> FindAssetUsage(string assetGuid)
     {
-        string assetPath = AssetDatabase.GUIDToAssetPath(assetGuid);
+        var assetPath = AssetDatabase.GUIDToAssetPath(assetGuid);
+        var asset = AssetDatabase.LoadMainAssetAtPath(assetPath);
         var results = SearchService.Request($"ref={assetPath}", SearchFlags.Synchronous).Fetch()
-            .Select(x => x.ToObject()).ToList();
+            .Select(x => x.ToObject()).Where(x => !ArePartOfSameMainAssets(x, asset)).ToList();
         return results;
     }
 
