@@ -8,7 +8,7 @@ using Object = UnityEngine.Object;
 using static EditorHelper;
 using static MyGUI;
 
-public class AssetDependencies : EditorWindow, IHasCustomMenu
+public class AssetDependencies : MyEditorWindow, IHasCustomMenu
 {
     private const int rowHeight = objectRowHeight;
     private static class Styles
@@ -48,7 +48,6 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
     private List<Object> usedBy = new();
     private List<Object> packagesUses = new();
     private List<Object> shownItems = new List<Object>();
-    private Object hoverObject;
     private int lastSelectedIndex = -1;
 
     [MenuItem("Window/Asset Dependencies _#F11")]

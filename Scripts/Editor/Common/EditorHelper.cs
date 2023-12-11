@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using UnityEditor;
+using UnityEditor.ShortcutManagement;
 using UnityEditorInternal;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -25,10 +26,10 @@ public class EditorHelper
         builderMethod.Invoke(null, new object[] { obj, true });
     }
 
-    [UnityEditor.ShortcutManagement.Shortcut("PropertyEditor/AssetsHistoryOpenMouseOver")]
+    [Shortcut("PropertyEditor/MyEditorWindowOpenMouseOver", KeyCode.Menu, ShortcutModifiers.Alt)]
     public static void OpenPropertyEditorHoverItem()
     {
-        var windows = Resources.FindObjectsOfTypeAll<AssetsHistory>();
+        var windows = Resources.FindObjectsOfTypeAll<MyEditorWindow>();
         foreach (var window in windows)
         {
             if (window.hoverObject)
@@ -150,6 +151,11 @@ public class EditorHelper
             if (xDir.StartsWith(yDir)) return -1;
             return x.CompareTo(y);
         }
+    }
+
+    public class MyEditorWindow : EditorWindow
+    {
+        public UnityEngine.Object hoverObject;
     }
     #endregion
 }

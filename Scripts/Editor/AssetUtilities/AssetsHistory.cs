@@ -9,14 +9,13 @@ using Object = UnityEngine.Object;
 using static EditorHelper;
 using static MyGUI;
 
-public class AssetsHistory : EditorWindow, IHasCustomMenu
+public class AssetsHistory : MyEditorWindow, IHasCustomMenu
 {
     protected const int rowHeight = objectRowHeight;
     protected const int minColumnWidth = 150;
     protected virtual string prefId => PlayerSettings.companyName + "." +
         PlayerSettings.productName + ".EpsilonDelta.AssetsHistory.";
 
-    public Object hoverObject;
     protected List<Object> groupedHistory = new List<Object>();
     protected List<Object> history = new List<Object>();
     protected List<Object> pinned = new List<Object>();

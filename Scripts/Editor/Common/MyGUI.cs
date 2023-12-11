@@ -25,7 +25,7 @@ public static class MyGUI
         }
     }
 
-    public static (bool isHovered, bool isShortRectHovered, bool pingButtonClicked) 
+    public static (bool isHovered, bool isShortRectHovered, bool pingButtonClicked)
         DrawObjectRow(Rect rect, Object obj, bool isSelected, bool pinned, string pingButtonContent = null)
     {
         var ev = Event.current;

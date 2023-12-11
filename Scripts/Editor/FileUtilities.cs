@@ -15,7 +15,7 @@ using Debug = UnityEngine.Debug;
 using System.Runtime.Serialization;
 
 // Menu item shortcuts: % == ctrl, # == shift, & == alt, _ == no modifier, LEFT, RIGHT, UP, DOWN, F1..F12, HOME, END, PGUP, PGDN
-public class FileUtilities : Editor
+public class FileUtilities
 {
     [MenuItem("Assets/File/Copy GUID %#c")]
     public static void CopyGuid()
