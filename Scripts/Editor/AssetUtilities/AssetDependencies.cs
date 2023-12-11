@@ -88,13 +88,14 @@ public class AssetDependencies : EditorWindow, IHasCustomMenu
         if (window.sameName)
         {
             var names = selectedPaths.Select(x => Path.GetFileNameWithoutExtension(x));
-            var sameNameGuids = names.SelectMany(x => AssetDatabase.FindAssets(x));
+            var sameNameGuids = names.SelectMany(x => AssetDatabase.FindAssets(x)).Distinct();
             var sameNamePaths = sameNameGuids
                 .Select(x => AssetDatabase.GUIDToAssetPath(x)); // This does Contains
+            sameNamePaths = sameNamePaths.Where(x => !x.StartsWith("Packages") && !selectedPaths.Contains(x));
+
             if (!window.containsName)
                 sameNamePaths = sameNamePaths
                     .Where(x => names.Contains(Path.GetFileNameWithoutExtension(x)));
-            sameNamePaths = sameNamePaths.Where(x => !x.StartsWith("Packages") && !selectedPaths.Contains(x));
             sameNamePaths = sameNamePaths.OrderBy(x => x, treeViewComparer).ToList();
             window.sameNamePaths = sameNamePaths.ToList();
             allItemsPaths.AddRange(sameNamePaths);
