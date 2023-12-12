@@ -124,8 +124,8 @@ public class AssetDependencies : MyEditorWindow, IHasCustomMenu
             {
                 var selectedGuids = selectedPaths.Select(x => AssetDatabase.AssetPathToGUID(x));
                 var usedByAll = new List<Object>();
-                foreach (var selectedGuid in selectedGuids)
-                    usedByAll.AddRange(FindAssetUsages.FindAssetUsage(selectedGuid, true));
+                foreach (var selected in window.selected)
+                    usedByAll.AddRange(FindAssetUsages.FindAssetUsage(selected, true));
                 window.searchAgain = false;
                 window.usedBy = usedByAll.Where(x => IsAsset(x))
                     .OrderBy(x => AssetDatabase.GetAssetPath(x), treeViewComparer).ToList();

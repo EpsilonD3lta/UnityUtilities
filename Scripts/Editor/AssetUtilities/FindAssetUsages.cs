@@ -54,29 +54,36 @@ public class FindAssetUsages : EditorWindow
         EditorGUILayout.EndScrollView();
     }
 
-    public static List<Object> FindObjectUsage(Object go, bool filtered = false, bool sorted = false)
+    public static List<Object> FindObjectUsage(Object obj, bool filtered = false, bool sorted = false)
     {
+        Debug.Log(SearchService.IsIndexReady("Assets"));
         var results = new List<Object>();
-        if (IsAsset(go))
+        if (IsAsset(obj))
         {
-            results = FindAssetUsage(GetGuid(go), filtered, sorted);
+            results = FindAssetUsage(obj, filtered, sorted);
         }
-        else if (IsNonAssetGameObject(go))
+        else if (IsNonAssetGameObject(obj))
         {
-            results = FindGameObjectUsage((GameObject)go);
+            results = FindGameObjectUsage((GameObject)obj);
         }
         return results;
     }
 
-    public static List<Object> FindAssetUsage(string assetGuid, bool filtered = false, bool sorted = false)
+    public static List<Object> FindAssetUsage(Object asset, bool filtered = false, bool sorted = false)
     {
-        var assetPath = AssetDatabase.GUIDToAssetPath(assetGuid);
-        var asset = AssetDatabase.LoadMainAssetAtPath(assetPath);
+        var assetPath = AssetDatabase.GetAssetPath(asset);
         var results = SearchService.Request($"ref={assetPath}", SearchFlags.Synchronous).Fetch()
             .Select(x => x.ToObject()).Where(x => !ArePartOfSameMainAssets(x, asset)).ToList();
 
         if (filtered) results = FilterResults(results);
         if (sorted) results = SortResults(results);
+        return results;
+    }
+
+    public static List<Object> FindGameObjectUsage(GameObject go)
+    {
+        var results = SearchService.Request($"ref={go.GetInstanceID()}", SearchFlags.Synchronous).Fetch()
+            .Select(x => x.ToObject()).ToList();
         return results;
     }
 
@@ -123,12 +130,6 @@ public class FindAssetUsages : EditorWindow
         return sortedResults;
     }
 
-    public static List<Object> FindGameObjectUsage(GameObject go)
-    {
-        var results = SearchService.Request($"ref={go.GetInstanceID()}", SearchFlags.Synchronous).Fetch()
-            .Select(x => x.ToObject()).ToList();
-        return results;
-    }
 
     //private async Task FindAssetUsage(string assetGuid)
     //{

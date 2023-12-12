@@ -76,8 +76,8 @@ public class FindUnusedAssets : EditorWindow
                 return;
             }
 
-            var guid = AssetDatabase.AssetPathToGUID(assetPath);
-            if (!FindAnyAssetUsage(guid))
+            var obj = AssetDatabase.LoadMainAssetAtPath(assetPath);
+            if (!FindAnyAssetUsage(obj))
             {
                 window.unusedAssets.Add(AssetDatabase.LoadMainAssetAtPath(assetPath));
             }
@@ -87,9 +87,9 @@ public class FindUnusedAssets : EditorWindow
     }
 
     /// <summary> Tries to find any asset usage. If one is found, returns true </summary>
-    private static bool FindAnyAssetUsage(string guid)
+    private static bool FindAnyAssetUsage(Object obj)
     {
-        var usedBy = FindAssetUsages.FindAssetUsage(guid);
+        var usedBy = FindAssetUsages.FindAssetUsage(obj);
         return usedBy.Any();
     }
 
