@@ -1,9 +1,11 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using UnityEditor;
 using UnityEditor.Search;
 using UnityEngine;
 using static EditorHelper;
+using Object = UnityEngine.Object;
 
 public class FindAssetUsages : EditorWindow
 {
@@ -14,7 +16,7 @@ public class FindAssetUsages : EditorWindow
     private Vector2 scroll = Vector2.zero;
 
     [MenuItem("Assets/Find Asset Usage _#F12")]
-    public static void CreateWindow()
+    public static async void CreateWindow()
     {
         var window = CreateWindow<FindAssetUsages>();
         window.Show();
@@ -22,7 +24,8 @@ public class FindAssetUsages : EditorWindow
         if (Selection.objects.Length > 0)
             window.selectedObject = Selection.objects[0];
 
-        window.usedByObjects = FindObjectUsage(window.selectedObject, true, true);
+        window.usedByObjects = await FindObjectUsageAsync(window.selectedObject, true, true);
+        window.Repaint();
     }
 
     private void OnGUI()
@@ -32,7 +35,7 @@ public class FindAssetUsages : EditorWindow
         GUIContent searchContent = EditorGUIUtility.IconContent("Search Icon");
         if (GUILayout.Button(searchContent, GUILayout.MaxWidth(40), GUILayout.MaxHeight(18)))
         {
-            usedByObjects = FindObjectUsage(selectedObject, false, true);
+            Find();
         }
         GUILayout.EndHorizontal();
         EditorGUILayout.Space();
@@ -54,42 +57,70 @@ public class FindAssetUsages : EditorWindow
         EditorGUILayout.EndScrollView();
     }
 
-    public static List<Object> FindObjectUsage(Object obj, bool filtered = false, bool sorted = false)
+    private async void Find()
     {
-        Debug.Log(SearchService.IsIndexReady("Assets"));
-        var results = new List<Object>();
+        usedByObjects = await FindObjectUsageAsync(selectedObject, true, true);
+        Repaint();
+    }
+
+    public static async Task<List<Object>> FindObjectUsageAsync(Object obj, bool filter = false, bool sort = false)
+    {
+        string objectPath = "";
+        Object asset = null;
         if (IsAsset(obj))
         {
-            results = FindAssetUsage(obj, filtered, sorted);
+            asset = obj;
+            objectPath = AssetDatabase.GetAssetPath(obj);
         }
         else if (IsNonAssetGameObject(obj))
         {
-            results = FindGameObjectUsage((GameObject)obj);
+            objectPath = obj.GetInstanceID().ToString();
         }
+
+        bool finished = false;
+        List<SearchItem> resultItems = new();
+        SearchService.Request($"ref={objectPath}",
+            (SearchContext context, IList<SearchItem> items)
+            => Found(ref finished, items, ref resultItems));
+        await WaitUntil(() => finished);
+        var results = resultItems.Select(x => x.ToObject()).Where(x => x != null).ToList();
+
+        if (filter) results = FilterResults(results, asset);
+        if (sort) results = SortResults(results);
         return results;
     }
 
-    public static List<Object> FindAssetUsage(Object asset, bool filtered = false, bool sorted = false)
-    {
-        var assetPath = AssetDatabase.GetAssetPath(asset);
-        var results = SearchService.Request($"ref={assetPath}", SearchFlags.Synchronous).Fetch()
-            .Select(x => x.ToObject()).Where(x => !ArePartOfSameMainAssets(x, asset)).ToList();
 
-        if (filtered) results = FilterResults(results);
-        if (sorted) results = SortResults(results);
-        return results;
-    }
-
-    public static List<Object> FindGameObjectUsage(GameObject go)
+    // This is faster for multiple searches e.g. in FindUnusedAssets, because Async version only does 1 search per editor Frame
+    public static List<Object> FindObjectUsageSync(Object obj, bool filter = false, bool sort = false)
     {
-        var results = SearchService.Request($"ref={go.GetInstanceID()}", SearchFlags.Synchronous).Fetch()
-            .Select(x => x.ToObject()).ToList();
+        string objectPath = "";
+        Object asset = null;
+        if (IsAsset(obj))
+        {
+            asset = obj;
+            objectPath = AssetDatabase.GetAssetPath(obj);
+        }
+        else if (IsNonAssetGameObject(obj))
+        {
+            objectPath = obj.GetInstanceID().ToString();
+        }
+
+        List<SearchItem> resultItems = new();
+        var results = SearchService.Request($"ref={objectPath}", SearchFlags.Synchronous).Fetch()
+            .Select(x => x.ToObject()).Where(x => x != null).ToList();
+
+        if (filter) results = FilterResults(results, asset);
+        if (sort) results = SortResults(results);
         return results;
     }
 
     // Without IsAnyPrefabInstanceRoot, results contain every childGameobject
-    public static List<Object> FilterResults(List<Object> results)
+    public static List<Object> FilterResults(List<Object> results, Object asset = null)
     {
+        results = results.Distinct().ToList();
+        if (asset != null) // Only for Assets, not for Hierarchy GameObjects
+            results = results.Where(x => !ArePartOfSameMainAssets(x, asset)).ToList();
         var filteredResults = new List<Object>();
         foreach (var obj in results)
         {
@@ -130,45 +161,21 @@ public class FindAssetUsages : EditorWindow
         return sortedResults;
     }
 
+    private static void Found(ref bool finished, IList<SearchItem> items, ref List<SearchItem> resultItems)
+    {
+        resultItems = items.ToList();
+        finished = true;
+    }
 
-    //private async Task FindAssetUsage(string assetGuid)
-    //{
-    //    CancelSearch();
-    //    tokenSource = new CancellationTokenSource();
-    //    //progressId = Progress.Start($"Find Asset Usages {selectedAssetName}");
-    //    //Progress.RegisterCancelCallback(progressId, CancelSearch);
-    //    assets = await FindAssetUsageAsync(assetGuid, tokenSource.Token, progressId);
-    //    //assets = FindAssetUsageSync(assetGuid);
-    //    Repaint();
-    //    tokenSource = null;
-    //}
+    public static async Task WaitUntil(System.Func<bool> condition, int timeout = -1)
+    {
+        var waitTask = Task.Run(async () =>
+        {
+            while (!condition()) await Task.Delay(1);
+        });
 
+        if (waitTask != await Task.WhenAny(waitTask, Task.Delay(timeout))) throw new System.TimeoutException();
+    }
 
-    //public static async Task<List<Object>> FindAssetUsageAsync(string assetGuid)
-    //{
-    //    string assetPath = AssetDatabase.GUIDToAssetPath(assetGuid);
-    //    bool finished = false;
-    //    List<SearchItem> its = new();
-    //    SearchService.Request($"ref={assetPath}",
-    //        (SearchContext context, IList<SearchItem> items)
-    //        => Found(ref finished, context, items, ref its), SearchFlags.WantsMore);
-    //    await WaitUntil(() => finished);
-    //    return its.Select(x => x.ToObject()).ToList();
-    //}
-
-    //private static void Found(ref bool finished, SearchContext context, IList<SearchItem> items, ref List<SearchItem> results)
-    //{
-    //    results = items.ToList();
-    //    finished = true;
-    //}
-
-    //public static async Task WaitUntil(System.Func<bool> condition, int timeout = -1)
-    //{
-    //    var waitTask = Task.Run(async () =>
-    //    {
-    //        while (!condition()) await Task.Delay(1);
-    //    });
-
-    //    if (waitTask != await Task.WhenAny(waitTask, Task.Delay(timeout))) throw new System.TimeoutException();
-    //}
 }
+

@@ -35,7 +35,7 @@ public class AssetDependencies : MyEditorWindow, IHasCustomMenu
     private bool showUses = true;
     private bool isRecursive = false;
     private bool showUsedBy = false;
-    private bool searchInScene = false;
+    private bool searchInScene = true;
     private bool showPackages = false;
     private bool isPackageRecursive = false;
     private bool searchAgain = true;
@@ -57,8 +57,8 @@ public class AssetDependencies : MyEditorWindow, IHasCustomMenu
         window = CreateWindow<AssetDependencies>("Asset Dependencies");
         window.minSize = new Vector2(100, rowHeight + 1);
 
-        Select(window);
-        SetShownItems(window);
+        window.Select();
+        window.SetShownItems();
         window.Show();
     }
 
@@ -67,32 +67,35 @@ public class AssetDependencies : MyEditorWindow, IHasCustomMenu
         menu.AddItem(EditorGUIUtility.TrTextContent("Test"), false, Test);
     }
 
-    public static void Select(AssetDependencies window)
+    private void Select()
     {
-        var selectedPaths = Selection.assetGUIDs.Select(x => AssetDatabase.GUIDToAssetPath(x));
-        selectedPaths = selectedPaths.OrderBy(x => x, treeViewComparer);
+        selected.Clear();
+        var newSelectedPaths = Selection.assetGUIDs.Select(x => AssetDatabase.GUIDToAssetPath(x));
+        newSelectedPaths = newSelectedPaths.OrderBy(x => x, treeViewComparer);
 
         // Prefab instances in Hierarchy. ExludePrefab does not exclude instances of prefabs, only assets.
         var selectedHierarchy = Selection.GetTransforms(SelectionMode.Unfiltered | SelectionMode.ExcludePrefab)
             .Select(x => x.gameObject);
         selectedHierarchy = selectedHierarchy.Where(x => PrefabUtility.IsAnyPrefabInstanceRoot(x));
-        selectedPaths = selectedPaths.Concat(
+        newSelectedPaths = newSelectedPaths.Concat(
             selectedHierarchy.Select(x => PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(x)));
 
-        window.selectedPaths = selectedPaths.ToList();
-        window.selected = selectedPaths.Select(x => AssetDatabase.LoadMainAssetAtPath(x)).ToList();
-        window.lastSelectedIndex = window.selected.Count - 1;
-        window.searchAgain = true;
+        selectedPaths = newSelectedPaths.ToList();
+        selected = newSelectedPaths.Select(x => AssetDatabase.LoadMainAssetAtPath(x)).ToList();
+        lastSelectedIndex = selected.Count - 1;
+        searchAgain = true;
     }
 
-    public static void SetShownItems(AssetDependencies window)
+    private async void SetShownItems()
     {
-        var selectedPaths = window.selectedPaths;
-        var shownItems = new List<Object>();
+        sameName.Clear();
+        uses.Clear();
+        // usedBy are async and cached
+        packagesUses.Clear();
+        shownItems.Clear();
+        shownItems.AddRange(selected);
 
-        shownItems.AddRange(window.selected);
-
-        if (window.showSameName)
+        if (showSameName)
         {
             var names = selectedPaths.Select(x => Path.GetFileNameWithoutExtension(x));
             var sameNameGuids = names.SelectMany(x => AssetDatabase.FindAssets(x)).Distinct();
@@ -100,55 +103,55 @@ public class AssetDependencies : MyEditorWindow, IHasCustomMenu
                 .Select(x => AssetDatabase.GUIDToAssetPath(x)); // This does Contains
             sameNamePaths = sameNamePaths.Where(x => !x.StartsWith("Packages") && !selectedPaths.Contains(x));
 
-            if (!window.isContainsName)
+            if (!isContainsName)
                 sameNamePaths = sameNamePaths
                     .Where(x => names.Contains(Path.GetFileNameWithoutExtension(x)));
             sameNamePaths = sameNamePaths.OrderBy(x => x, treeViewComparer).ToList();
-            window.sameName = sameNamePaths.Select(x => AssetDatabase.LoadMainAssetAtPath(x)).ToList();
-            shownItems.AddRange(window.sameName);
+            sameName = sameNamePaths.Select(x => AssetDatabase.LoadMainAssetAtPath(x)).ToList();
+            shownItems.AddRange(sameName);
         }
 
-        if (window.showUses)
+        if (showUses)
         {
-            var usesPaths = AssetDatabase.GetDependencies(selectedPaths.ToArray(), window.isRecursive);
+            var usesPaths = AssetDatabase.GetDependencies(selectedPaths.ToArray(), isRecursive);
             usesPaths = usesPaths.Where(x => !selectedPaths.Contains(x)).ToArray();
             usesPaths = usesPaths.Where(x => !x.StartsWith("Packages"))
                 .OrderBy(x => x, treeViewComparer).ToArray();
-            window.uses = usesPaths.Select(x => AssetDatabase.LoadMainAssetAtPath(x)).ToList();
-            shownItems.AddRange(window.uses);
+            uses = usesPaths.Select(x => AssetDatabase.LoadMainAssetAtPath(x)).ToList();
+            shownItems.AddRange(uses);
         }
 
-        if (window.showUsedBy)
+        if (showUsedBy)
         {
-            if (window.searchAgain)
+            if (searchAgain)
             {
-                var selectedGuids = selectedPaths.Select(x => AssetDatabase.AssetPathToGUID(x));
+                usedBy.Clear();
                 var usedByAll = new List<Object>();
-                foreach (var selected in window.selected)
-                    usedByAll.AddRange(FindAssetUsages.FindAssetUsage(selected, true));
-                window.searchAgain = false;
-                window.usedBy = usedByAll.Where(x => IsAsset(x))
+                foreach (var sel in selected)
+                    usedByAll.AddRange(await FindAssetUsages.FindObjectUsageAsync(sel, true));
+                searchAgain = false;
+                usedBy = usedByAll.Where(x => IsAsset(x))
                     .OrderBy(x => AssetDatabase.GetAssetPath(x), treeViewComparer).ToList();
 
-                if (window.searchInScene)
-                    window.usedBy.AddRange(usedByAll.Where(x => !IsAsset(x)));
+                if (searchInScene)
+                    usedBy.AddRange(usedByAll.Where(x => !IsAsset(x)));
 
-                window.usedBy = window.usedBy.Distinct().ToList();
+                usedBy = usedBy.Distinct().ToList();
+                adjustSize = true;
+                Repaint();
             }
-            shownItems.AddRange(window.usedBy);
+            shownItems.AddRange(usedBy);
         }
 
-        if (window.showPackages)
+        if (showPackages)
         {
-            var packagesUsesPaths = AssetDatabase.GetDependencies(selectedPaths.ToArray(), window.isPackageRecursive);
+            var packagesUsesPaths = AssetDatabase.GetDependencies(selectedPaths.ToArray(), isPackageRecursive);
             packagesUsesPaths = packagesUsesPaths.Where(x => !selectedPaths.Contains(x)).ToArray();
             packagesUsesPaths = packagesUsesPaths.Where(x => x.StartsWith("Packages"))
                 .OrderBy(x => x, treeViewComparer).ToArray();
-            window.packagesUses = packagesUsesPaths.Select(x => AssetDatabase.LoadMainAssetAtPath(x)).ToList();
-            shownItems.AddRange(window.packagesUses);
+            packagesUses = packagesUsesPaths.Select(x => AssetDatabase.LoadMainAssetAtPath(x)).ToList();
+            shownItems.AddRange(packagesUses);
         }
-
-        window.shownItems = shownItems;
     }
 
     private void Test()
@@ -184,8 +187,8 @@ public class AssetDependencies : MyEditorWindow, IHasCustomMenu
         GUIContent reselectContent = EditorGUIUtility.IconContent("Grid.Default@2x");
         if (GUI.Button(new Rect(xPos + headerWidth, yPos, 20, headerHeight + 2), reselectContent))
         {
-            Select(this);
-            SetShownItems(this);
+            Select();
+            SetShownItems();
         }
         yPos = 20;
         int i = 0;
@@ -248,7 +251,7 @@ public class AssetDependencies : MyEditorWindow, IHasCustomMenu
         if (GUI.Button(new Rect(xPos + headerWidth + 16, yPos, 20, headerHeight + 2), searchContent))
         {
             searchAgain = true;
-            SetShownItems(this);
+            SetShownItems();
         }
         yPos += 20;
         if (showUsedBy)
@@ -443,7 +446,7 @@ public class AssetDependencies : MyEditorWindow, IHasCustomMenu
         selected = GUI.Toggle(rect, selected, text, Styles.foldoutStyle);
         if (EditorGUI.EndChangeCheck())
         {
-            SetShownItems(this);
+            SetShownItems();
             adjustSize = true;
         }
         GUI.backgroundColor = oldBackgroundColor;
@@ -456,7 +459,7 @@ public class AssetDependencies : MyEditorWindow, IHasCustomMenu
         if (EditorGUI.EndChangeCheck())
         {
             if (searchAgain) this.searchAgain = true;
-            SetShownItems(this);
+            SetShownItems();
             adjustSize = true;
         }
     }
