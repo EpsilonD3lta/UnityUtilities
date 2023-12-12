@@ -3,6 +3,9 @@ using UnityEngine;
 using Object = UnityEngine.Object;
 using static EditorHelper;
 using System.Linq;
+using NUnit.Framework;
+using System.Collections.Generic;
+using System;
 
 public static class MyGUI
 {
@@ -105,5 +108,175 @@ public static class MyGUI
         EditorGUIUtility.SetIconSize(oldIconSize);
         GUI.backgroundColor = oldBackgroundColor;
         return clicked;
+    }
+
+    public static void KeyboardNavigation(Event ev, ref int lastSelectedIndex, List<Object> shownItems,
+        Action deleteKey = null)
+    {
+        if (ev.keyCode == KeyCode.DownArrow)
+        {
+            lastSelectedIndex = Mod(lastSelectedIndex + 1, shownItems.Count);
+            Selection.objects = new Object[] { shownItems[lastSelectedIndex] };
+            ev.Use();
+        }
+        else if (ev.keyCode == KeyCode.UpArrow)
+        {
+            lastSelectedIndex = Mod(lastSelectedIndex - 1, shownItems.Count);
+            Selection.objects = new Object[] { shownItems[lastSelectedIndex] };
+            ev.Use();
+        }
+        else if (ev.keyCode == KeyCode.Return)
+        {
+            var objs = shownItems.Where(x => Selection.objects.Contains(x));
+            foreach (var obj in objs)
+                OpenObject(obj);
+            ev.Use();
+        }
+        else if (ev.keyCode == KeyCode.Delete)
+        {
+            deleteKey?.Invoke();
+            ev.Use();
+        }
+    }
+
+    public class Row
+    {
+    //    private bool ObjectRow(Rect rect, int i, Object obj, ref int lastSelectedIndex, string pingButtonContent = null)
+    //    {
+    //        var ev = Event.current;
+    //        Rect fullRect = rect;
+    //        bool isSelected = Selection.objects.Contains(obj);
+
+    //        var buttonResult = DrawObjectRow(fullRect, obj, isSelected, false, pingButtonContent);
+    //        if (buttonResult.pingButtonClicked)
+    //        {
+    //            if (Event.current.button == 0)
+    //                PingButtonLeftClick(obj);
+    //            else if (Event.current.button == 1)
+    //                PingButtonRightClick(obj);
+    //            else if (Event.current.button == 2)
+    //                PingButtonMiddleClick(obj);
+    //        }
+
+    //        if (buttonResult.isShortRectHovered)
+    //        {
+    //            if (ev.type == EventType.MouseUp && ev.button == 0 && ev.clickCount == 1) // Select on MouseUp
+    //            {
+    //                LeftMouseUp(obj, isSelected, i);
+    //                ev.Use();
+    //            }
+    //            else if (ev.type == EventType.MouseDown && ev.button == 0 && ev.clickCount == 2)
+    //            {
+    //                DoubleClick(obj);
+    //                ev.Use();
+    //            }
+    //            else if (ev.type == EventType.MouseDown && ev.button == 1)
+    //            {
+    //                RightClick(obj, i);
+    //                ev.Use();
+    //            }
+    //            else if (ev.type == EventType.ContextClick)
+    //            {
+    //                ContextClick(new Rect(ev.mousePosition.x, ev.mousePosition.y, 0, 0), obj);
+    //            }
+    //        }
+    //        return buttonResult.isHovered;
+    //    }
+
+    //    private void LeftMouseUp(Object obj, bool isSelected, int i, ref int lastSelectedIndex)
+    //    {
+    //        var ev = Event.current;
+    //        lastSelectedIndex = i;
+    //        if (ev.modifiers == EventModifiers.Control) // Ctrl select
+    //            if (!isSelected) Selection.objects = Selection.objects.Append(obj).ToArray();
+    //            else Selection.objects = Selection.objects.Where(x => x != obj).ToArray();
+    //        else if (ev.modifiers == EventModifiers.Shift) // Shift select
+    //        {
+    //            int firstSelected = shownItems.FindIndex(x => Selection.objects.Contains(x));
+    //            if (firstSelected != -1)
+    //            {
+    //                int startIndex = Mathf.Min(firstSelected + 1, i);
+    //                int count = Mathf.Abs(firstSelected - i);
+    //                Selection.objects = Selection.objects.
+    //                    Concat(shownItems.GetRange(startIndex, count)).Distinct().ToArray();
+    //            }
+    //            else Selection.objects = Selection.objects.Append(obj).ToArray();
+    //        }
+    //        else
+    //        {
+    //            Selection.activeObject = obj; // Ordinary select
+    //            Selection.objects = new Object[] { obj };
+    //        }
+    //    }
+
+    //    private void DoubleClick(Object obj)
+    //    {
+    //        if (IsAsset(obj)) AssetDatabase.OpenAsset(obj);
+    //        else if (IsNonAssetGameObject(obj)) SceneView.lastActiveSceneView.FrameSelected();
+    //    }
+
+    //    // This is different event then context click, bot are executed, context after right click
+    //    private void RightClick(Object obj, int i)
+    //    {
+    //        lastSelectedIndex = i;
+    //        Selection.activeObject = obj;
+    //    }
+
+    //    private void ContextClick(Rect rect, Object obj)
+    //    {
+    //        Selection.activeObject = obj;
+    //        if (IsComponent(obj)) OpenObjectContextMenu(rect, obj);
+    //        else if (IsAsset(obj)) EditorUtility.DisplayPopupMenu(rect, "Assets/", null);
+    //        else if (IsNonAssetGameObject(obj))
+    //        {
+    //            if (Selection.transforms.Length > 0) // Just to be sure it's really a HierarchyGameobject
+    //                OpenHierarchyContextMenu(Selection.transforms[0].gameObject.GetInstanceID());
+    //        }
+    //    }
+
+    //    private void PingButtonLeftClick(Object obj)
+    //    {
+    //        if (Event.current.modifiers == EventModifiers.Alt) // Add or remove pinned item
+    //        {
+    //            string path = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(obj);
+    //            obj = AssetDatabase.LoadMainAssetAtPath(path);
+    //            EditorGUIUtility.PingObject(obj);
+    //        }
+    //        else EditorGUIUtility.PingObject(obj);
+    //    }
+
+    //    private void PingButtonRightClick(Object obj)
+    //    {
+    //        OpenPropertyEditor(obj);
+    //    }
+
+    //    private void PingButtonMiddleClick(Object obj)
+    //    {
+    //        if (Event.current.modifiers == EventModifiers.Alt)
+    //            Debug.Log($"{GlobalObjectId.GetGlobalObjectIdSlow(obj)} InstanceID: {obj.GetInstanceID()}");
+    //    }
+
+    //    private void KeyboardNavigation(Event ev)
+    //    {
+    //        if (ev.keyCode == KeyCode.DownArrow)
+    //        {
+    //            lastSelectedIndex = Mod(lastSelectedIndex + 1, shownItems.Count);
+    //            Selection.objects = new Object[] { shownItems[lastSelectedIndex] };
+    //            ev.Use();
+    //        }
+    //        else if (ev.keyCode == KeyCode.UpArrow)
+    //        {
+    //            lastSelectedIndex = Mod(lastSelectedIndex - 1, shownItems.Count);
+    //            Selection.objects = new Object[] { shownItems[lastSelectedIndex] };
+    //            ev.Use();
+    //        }
+    //        else if (ev.keyCode == KeyCode.Return)
+    //        {
+    //            var objs = shownItems.Where(x => Selection.objects.Contains(x));
+    //            foreach (var obj in objs)
+    //                DoubleClick(obj);
+    //            ev.Use();
+    //        }
+    //    }
     }
 }

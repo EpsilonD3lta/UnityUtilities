@@ -174,7 +174,7 @@ public class AssetDependencies : MyEditorWindow, IHasCustomMenu
         bool isAnyHover = false;
 
         if (ev.type == EventType.MouseMove) Repaint();
-        if (ev.type == EventType.KeyDown) KeyboardNavigation(ev);
+        if (ev.type == EventType.KeyDown) MyGUI.KeyboardNavigation(ev, ref lastSelectedIndex, shownItems);
 
         var scrollRectHeight = height;
         var scrollRectWidth = columnWidth;
@@ -344,8 +344,8 @@ public class AssetDependencies : MyEditorWindow, IHasCustomMenu
 
     private void LeftMouseUp(Object obj, bool isSelected, int i)
     {
-        var ev = Event.current;
         lastSelectedIndex = i;
+        var ev = Event.current;
         if (ev.modifiers == EventModifiers.Control) // Ctrl select
             if (!isSelected) Selection.objects = Selection.objects.Append(obj).ToArray();
             else Selection.objects = Selection.objects.Where(x => x != obj).ToArray();
@@ -412,29 +412,6 @@ public class AssetDependencies : MyEditorWindow, IHasCustomMenu
     {
         if (Event.current.modifiers == EventModifiers.Alt)
             Debug.Log($"{GlobalObjectId.GetGlobalObjectIdSlow(obj)} InstanceID: {obj.GetInstanceID()}");
-    }
-
-    private void KeyboardNavigation(Event ev)
-    {
-        if (ev.keyCode == KeyCode.DownArrow)
-        {
-            lastSelectedIndex = Mod(lastSelectedIndex + 1, shownItems.Count);
-            Selection.objects = new Object[] { shownItems[lastSelectedIndex] };
-            ev.Use();
-        }
-        else if (ev.keyCode == KeyCode.UpArrow)
-        {
-            lastSelectedIndex = Mod(lastSelectedIndex - 1, shownItems.Count);
-            Selection.objects = new Object[] { shownItems[lastSelectedIndex] };
-            ev.Use();
-        }
-        else if (ev.keyCode == KeyCode.Return)
-        {
-            var objs = shownItems.Where(x => Selection.objects.Contains(x));
-            foreach (var obj in objs)
-                OpenObject(obj);
-            ev.Use();
-        }
     }
 
     #region Drawing

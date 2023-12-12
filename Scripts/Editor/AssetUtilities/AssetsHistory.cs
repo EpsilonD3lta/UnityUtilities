@@ -20,6 +20,7 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
     protected List<Object> history = new List<Object>();
     protected List<Object> pinned = new List<Object>();
     private int limit = 10;
+    private int lastSelectedIndex = -1;
 
     [MenuItem("Window/Assets History")]
     private static void CreateWindow()
@@ -93,7 +94,7 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
             LimitAndOrderHistory();
         }
         if (ev.type == EventType.MouseMove) Repaint();
-        if (ev.type == EventType.KeyDown) KeyboardNavigation(ev);
+        if (ev.type == EventType.KeyDown) KeyboardNavigation(ev, ref lastSelectedIndex, groupedHistory, OnDeleteKey);
         for (int i = 0; i < groupedHistory.Count; i++)
         {
             var obj = groupedHistory[i];
@@ -127,7 +128,7 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
 
             if (buttonResult.isShortRectHovered)
             {
-                if (ev.type == EventType.MouseUp && ev.button == 0 &&  ev.clickCount == 1)
+                if (ev.type == EventType.MouseUp && ev.button == 0 && ev.clickCount == 1)
                 {
                     LeftMouseUp(obj, isSelected, i); // Select on MouseUp
                     ev.Use();
@@ -139,7 +140,7 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
                 }
                 else if (ev.type == EventType.MouseDown && ev.button == 1)
                 {
-                    RightClick(obj);
+                    RightClick(obj, i);
                     ev.Use();
                 }
                 else if (ev.type == EventType.ContextClick)
@@ -233,6 +234,7 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
 
     private void LeftMouseUp(Object obj, bool isSelected, int i)
     {
+        lastSelectedIndex = i;
         var ev = Event.current;
         if (ev.modifiers == EventModifiers.Control) // Ctrl select
             if (!isSelected) Selection.objects = Selection.objects.Append(obj).ToArray();
@@ -263,8 +265,9 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
     }
 
     // This is different event then context click, bot are executed, context after right click
-    private void RightClick(Object obj)
+    private void RightClick(Object obj, int i)
     {
+        lastSelectedIndex = i;
         Selection.activeObject = obj;
     }
 
@@ -339,37 +342,12 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
         }
     }
 
-    private void KeyboardNavigation(Event ev)
+    private void OnDeleteKey()
     {
-        if (ev.keyCode == KeyCode.DownArrow)
-        {
-            int lastHighlightedIndex = groupedHistory.FindLastIndex(x => Selection.objects.Contains(x));
-            int selectIndex = Mod(lastHighlightedIndex + 1, groupedHistory.Count);
-            Selection.objects = new Object[] { groupedHistory[selectIndex] };
-            ev.Use();
-        }
-        else if (ev.keyCode == KeyCode.UpArrow)
-        {
-            int lastHighlightedIndex = groupedHistory.FindIndex(x => Selection.objects.Contains(x));
-            int selectIndex = Mod(lastHighlightedIndex - 1, groupedHistory.Count);
-            Selection.objects = new Object[] { groupedHistory[selectIndex] };
-            ev.Use();
-        }
-        else if (ev.keyCode == KeyCode.Return || ev.keyCode == KeyCode.KeypadEnter)
-        {
-            var objs = groupedHistory.Where(x => Selection.objects.Contains(x));
-            foreach (var obj in objs)
-                DoubleClick(obj);
-            ev.Use();
-        }
-        else if (ev.keyCode == KeyCode.Delete)
-        {
-            RemoveAllHistory(x => Selection.objects.Contains(x));
-            RemoveAllPinned(x => Selection.objects.Contains(x));
-            LimitAndOrderHistory();
-            Repaint();
-            ev.Use();
-        }
+        RemoveAllHistory(x => Selection.objects.Contains(x));
+        RemoveAllPinned(x => Selection.objects.Contains(x));
+        LimitAndOrderHistory();
+        Repaint();
     }
 
     protected virtual void SelectionChanged()
@@ -502,7 +480,7 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
         int historyLimit = limit - onlyPinned;
         if (history.Count > historyLimit)
             RemoveAllHistory(x => history.IndexOf(x) >= historyLimit);
-            //history = history.Take(historyLimit).ToList();
+        //history = history.Take(historyLimit).ToList();
         groupedHistory = history.Where(x => !pinned.Contains(x)).OrderBy(x => x.GetType().Name).ThenBy(x => x.name).
             ThenBy(x => x.GetInstanceID()).ToList();
         groupedHistory.InsertRange(0, pinned);
