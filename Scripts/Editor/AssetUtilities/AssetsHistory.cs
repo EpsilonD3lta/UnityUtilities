@@ -71,9 +71,14 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
         LimitAndOrderHistory();
     }
 
-    private void OnDisable()
+    protected virtual void OnDisable()
     {
         DragAndDrop.RemoveDropHandler(OnDragDroppedToProjectTab);
+    }
+
+    protected virtual void OnDestroy()
+    {
+        SaveHistoryToEditorPrefs();
     }
 
     // This is received only when window is visible

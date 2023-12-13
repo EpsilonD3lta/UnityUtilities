@@ -63,12 +63,6 @@ public class HierarchyHistory : AssetsHistory
         menu.AddItem(EditorGUIUtility.TrTextContent("List all objects"), false, ListAllObjects);
     }
 
-    protected override void Awake()
-    {
-        //Debug.Log("custom awake");
-        base.Awake();
-    }
-
     protected override void Test()
     {
         var gos = FindObjectsOfType<Transform>(true);
@@ -122,16 +116,9 @@ public class HierarchyHistory : AssetsHistory
 
         LimitAndOrderHistory();
     }
-    private void OnDisable()
+    protected override void OnDisable()
     {
-        //Debug.Log("custom disable");
         OnBeforeSerialize();
-    }
-
-    void OnDestroy()
-    {
-        //Debug.Log("custom destroy");
-        SaveHistoryToEditorPrefs();
     }
 
     protected override void SelectionChanged()
