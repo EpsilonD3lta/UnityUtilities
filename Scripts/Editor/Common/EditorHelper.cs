@@ -227,7 +227,35 @@ public class EditorHelper
 
     public class MyEditorWindow : EditorWindow
     {
-        public UnityEngine.Object hoverObject;
+        public Object hoverObject;
+
+        [InitializeOnLoadMethod]
+        private static void Init()
+        {
+            DragAndDrop.AddDropHandler(OnDragDroppedToProjectTab);
+        }
+
+        // Drag performed on Project Tab
+        private static DragAndDropVisualMode OnDragDroppedToProjectTab(int dragInstanceId, string dropUponPath, bool perform)
+        {
+            if (!perform) return DragAndDropVisualMode.None; // Next Handler in order will handle this drag (Unity default)
+            if (!AssetDatabase.IsValidFolder(dropUponPath)) return DragAndDropVisualMode.None;
+            var dragData = DragAndDrop.GetGenericData(nameof(MyEditorWindow));
+            if (!(dragData is bool b && b))
+                return DragAndDropVisualMode.None;
+            foreach (var droppedObj in DragAndDrop.objectReferences)
+            {
+                if (IsAsset(droppedObj))
+                {
+                    var oldPath = AssetDatabase.GetAssetPath(droppedObj);
+                    var assetName = Path.GetFileName(oldPath);
+                    var newPath = dropUponPath + "/" + assetName;
+                    AssetDatabase.MoveAsset(oldPath, newPath);
+                }
+            }
+            AssetDatabase.Refresh();
+            return DragAndDropVisualMode.Move;
+        }
     }
     #endregion
 }

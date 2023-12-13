@@ -6,6 +6,7 @@ using System.Linq;
 using NUnit.Framework;
 using System.Collections.Generic;
 using System;
+using System.Runtime.CompilerServices;
 
 public static class MyGUI
 {
@@ -29,7 +30,7 @@ public static class MyGUI
     }
 
     public static (bool isHovered, bool isShortRectHovered, bool pingButtonClicked)
-        DrawObjectRow(Rect rect, Object obj, bool isSelected, bool pinned, string pingButtonContent = null)
+        DrawObjectRow(Rect rect, Object obj, bool isSelected, bool isPinned, string pingButtonContent = null)
     {
         var ev = Event.current;
 
@@ -64,10 +65,10 @@ public static class MyGUI
                     content.image = EditorGUIUtility.IconContent("GameObject Icon").image;
                 if (PrefabUtility.IsAddedGameObjectOverride(go)) isAddedGameObject = true;
             }
-            if (pinned) style.padding.right += height;
+            if (isPinned) style.padding.right += height;
             style.Draw(rect, content, false, false, isSelected, true);
             GUI.contentColor = oldColor;
-            if (pinned)
+            if (isPinned)
             {
                 var pinnedIconContent = EditorGUIUtility.IconContent("Favorite On Icon");
                 Rect pinnedIconRect = new Rect(rect.xMax - 2 * height, rect.yMax - height, height, height);
@@ -110,6 +111,12 @@ public static class MyGUI
         return clicked;
     }
 
+    private static void DrawDragInsertionLine(Rect fullRect)
+    {
+        Rect lineRect = new Rect(fullRect.x, fullRect.y - 4, fullRect.width, 3);
+        GUI.Label(lineRect, GUIContent.none, Styles.insertion);
+    }
+
     public static void KeyboardNavigation(Event ev, ref int lastSelectedIndex, List<Object> shownItems,
         Action deleteKey = null)
     {
@@ -139,144 +146,157 @@ public static class MyGUI
         }
     }
 
-    public class Row
+    public static (bool isHovered, bool isShortRectHovered)
+        ObjectRow(Rect rect, int i, Object obj, List<Object> shownItems, ref int lastSelectedIndex,
+        string pingButtonContent = null, bool isPinned = false, Action middleClick = null,
+        Action pingButtonMiddleClick = null, Action dragStarted = null, Action dragPerformed = null)
     {
-    //    private bool ObjectRow(Rect rect, int i, Object obj, ref int lastSelectedIndex, string pingButtonContent = null)
-    //    {
-    //        var ev = Event.current;
-    //        Rect fullRect = rect;
-    //        bool isSelected = Selection.objects.Contains(obj);
+        var ev = Event.current;
+        bool isSelected = Selection.objects.Contains(obj);
 
-    //        var buttonResult = DrawObjectRow(fullRect, obj, isSelected, false, pingButtonContent);
-    //        if (buttonResult.pingButtonClicked)
-    //        {
-    //            if (Event.current.button == 0)
-    //                PingButtonLeftClick(obj);
-    //            else if (Event.current.button == 1)
-    //                PingButtonRightClick(obj);
-    //            else if (Event.current.button == 2)
-    //                PingButtonMiddleClick(obj);
-    //        }
+        var buttonResult = DrawObjectRow(rect, obj, isSelected, isPinned, pingButtonContent);
+        if (buttonResult.pingButtonClicked)
+        {
+            if (Event.current.button == 0)
+                PingButtonLeftClick(obj);
+            else if (Event.current.button == 1)
+                PingButtonRightClick(obj);
+            else if (Event.current.button == 2)
+                PingButtonMiddleClick(obj, pingButtonMiddleClick);
+        }
 
-    //        if (buttonResult.isShortRectHovered)
-    //        {
-    //            if (ev.type == EventType.MouseUp && ev.button == 0 && ev.clickCount == 1) // Select on MouseUp
-    //            {
-    //                LeftMouseUp(obj, isSelected, i);
-    //                ev.Use();
-    //            }
-    //            else if (ev.type == EventType.MouseDown && ev.button == 0 && ev.clickCount == 2)
-    //            {
-    //                DoubleClick(obj);
-    //                ev.Use();
-    //            }
-    //            else if (ev.type == EventType.MouseDown && ev.button == 1)
-    //            {
-    //                RightClick(obj, i);
-    //                ev.Use();
-    //            }
-    //            else if (ev.type == EventType.ContextClick)
-    //            {
-    //                ContextClick(new Rect(ev.mousePosition.x, ev.mousePosition.y, 0, 0), obj);
-    //            }
-    //        }
-    //        return buttonResult.isHovered;
-    //    }
+        if (buttonResult.isShortRectHovered)
+        {
+            if (ev.type == EventType.MouseUp && ev.button == 0 && ev.clickCount == 1) // Select on MouseUp
+            {
+                LeftMouseUp(obj, isSelected, i, ref lastSelectedIndex);
+            }
+            else if (ev.type == EventType.MouseDown && ev.button == 0 && ev.clickCount == 2)
+            {
+                DoubleClick(obj);
 
-    //    private void LeftMouseUp(Object obj, bool isSelected, int i, ref int lastSelectedIndex)
-    //    {
-    //        var ev = Event.current;
-    //        lastSelectedIndex = i;
-    //        if (ev.modifiers == EventModifiers.Control) // Ctrl select
-    //            if (!isSelected) Selection.objects = Selection.objects.Append(obj).ToArray();
-    //            else Selection.objects = Selection.objects.Where(x => x != obj).ToArray();
-    //        else if (ev.modifiers == EventModifiers.Shift) // Shift select
-    //        {
-    //            int firstSelected = shownItems.FindIndex(x => Selection.objects.Contains(x));
-    //            if (firstSelected != -1)
-    //            {
-    //                int startIndex = Mathf.Min(firstSelected + 1, i);
-    //                int count = Mathf.Abs(firstSelected - i);
-    //                Selection.objects = Selection.objects.
-    //                    Concat(shownItems.GetRange(startIndex, count)).Distinct().ToArray();
-    //            }
-    //            else Selection.objects = Selection.objects.Append(obj).ToArray();
-    //        }
-    //        else
-    //        {
-    //            Selection.activeObject = obj; // Ordinary select
-    //            Selection.objects = new Object[] { obj };
-    //        }
-    //    }
+            }
+            else if (ev.type == EventType.MouseDown && ev.button == 1)
+            {
+                RightClick(obj, i, ref lastSelectedIndex);
 
-    //    private void DoubleClick(Object obj)
-    //    {
-    //        if (IsAsset(obj)) AssetDatabase.OpenAsset(obj);
-    //        else if (IsNonAssetGameObject(obj)) SceneView.lastActiveSceneView.FrameSelected();
-    //    }
+            }
+            else if (ev.type == EventType.ContextClick)
+            {
+                ContextClick(new Rect(ev.mousePosition.x, ev.mousePosition.y, 0, 0), obj);
+            }
+            else if (ev.type == EventType.MouseDown && ev.button == 2)
+            {
+                middleClick?.Invoke();
+            }
+            // Drag
+            else if (ev.type == EventType.MouseDrag && ev.button == 0 && // Start dragging this asset
+                DragAndDrop.visualMode == DragAndDropVisualMode.None)
+            {
+                DragAndDrop.PrepareStartDrag();
+                DragAndDrop.SetGenericData(nameof(MyEditorWindow), true);
+                DragAndDrop.visualMode = DragAndDropVisualMode.Move;
+                if (isSelected)
+                    DragAndDrop.objectReferences = shownItems.Where(x => Selection.objects.Contains(x))
+                    .ToArray();
+                else DragAndDrop.objectReferences = new Object[] { obj };
+                DragAndDrop.StartDrag("MyEditorWindow Drag");
+                ev.Use();
+                dragStarted?.Invoke();
+            }
+            else if (ev.type == EventType.DragUpdated && ev.button == 0) // Update drag
+            {
+                DragAndDrop.visualMode = DragAndDropVisualMode.Generic;
+                GUI.Label(rect, GUIContent.none, Styles.insertion);
+                ev.Use();
+            }
+            else if (ev.type == EventType.DragPerform && ev.button == 0) // Receive drag and drop
+            {
+                dragPerformed?.Invoke();
+            }
+            // Draw insertion line
+            if (isPinned && DragAndDrop.visualMode != DragAndDropVisualMode.None)
+            {
+                DrawDragInsertionLine(rect);
+            }
+        }
+        return (buttonResult.isHovered, buttonResult.isShortRectHovered);
 
-    //    // This is different event then context click, bot are executed, context after right click
-    //    private void RightClick(Object obj, int i)
-    //    {
-    //        lastSelectedIndex = i;
-    //        Selection.activeObject = obj;
-    //    }
 
-    //    private void ContextClick(Rect rect, Object obj)
-    //    {
-    //        Selection.activeObject = obj;
-    //        if (IsComponent(obj)) OpenObjectContextMenu(rect, obj);
-    //        else if (IsAsset(obj)) EditorUtility.DisplayPopupMenu(rect, "Assets/", null);
-    //        else if (IsNonAssetGameObject(obj))
-    //        {
-    //            if (Selection.transforms.Length > 0) // Just to be sure it's really a HierarchyGameobject
-    //                OpenHierarchyContextMenu(Selection.transforms[0].gameObject.GetInstanceID());
-    //        }
-    //    }
+        void LeftMouseUp(Object obj, bool isSelected, int i, ref int lastSelectedIndex)
+        {
+            lastSelectedIndex = i;
+            var ev = Event.current;
+            if (ev.modifiers == EventModifiers.Control) // Ctrl select
+                if (!isSelected) Selection.objects = Selection.objects.Append(obj).ToArray();
+                else Selection.objects = Selection.objects.Where(x => x != obj).ToArray();
+            else if (ev.modifiers == EventModifiers.Shift) // Shift select
+            {
+                int firstSelected = shownItems.FindIndex(x => Selection.objects.Contains(x));
+                if (firstSelected != -1)
+                {
+                    int startIndex = Mathf.Min(firstSelected + 1, i);
+                    int count = Mathf.Abs(firstSelected - i);
+                    Selection.objects = Selection.objects.
+                        Concat(shownItems.GetRange(startIndex, count)).Distinct().ToArray();
+                }
+                else Selection.objects = Selection.objects.Append(obj).ToArray();
+            }
+            else
+            {
+                Selection.activeObject = obj; // Ordinary select
+                Selection.objects = new Object[] { obj };
+            }
+            ev.Use();
+        }
 
-    //    private void PingButtonLeftClick(Object obj)
-    //    {
-    //        if (Event.current.modifiers == EventModifiers.Alt) // Add or remove pinned item
-    //        {
-    //            string path = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(obj);
-    //            obj = AssetDatabase.LoadMainAssetAtPath(path);
-    //            EditorGUIUtility.PingObject(obj);
-    //        }
-    //        else EditorGUIUtility.PingObject(obj);
-    //    }
+        void DoubleClick(Object obj)
+        {
+            OpenObject(obj);
+            ev.Use();
+        }
 
-    //    private void PingButtonRightClick(Object obj)
-    //    {
-    //        OpenPropertyEditor(obj);
-    //    }
+        // This is different event then context click, bot are executed, context after right click
+        void RightClick(Object obj, int i, ref int lastSelectedIndex)
+        {
+            lastSelectedIndex = i;
+            Selection.activeObject = obj;
+            ev.Use();
+        }
 
-    //    private void PingButtonMiddleClick(Object obj)
-    //    {
-    //        if (Event.current.modifiers == EventModifiers.Alt)
-    //            Debug.Log($"{GlobalObjectId.GetGlobalObjectIdSlow(obj)} InstanceID: {obj.GetInstanceID()}");
-    //    }
+        void ContextClick(Rect rect, Object obj)
+        {
+            Selection.activeObject = obj;
+            if (IsComponent(obj)) OpenObjectContextMenu(rect, obj);
+            else if (IsAsset(obj)) EditorUtility.DisplayPopupMenu(rect, "Assets/", null);
+            else if (IsNonAssetGameObject(obj))
+            {
+                if (Selection.transforms.Length > 0) // Just to be sure it's really a HierarchyGameobject
+                    OpenHierarchyContextMenu(Selection.transforms[0].gameObject.GetInstanceID());
+            }
+        }
 
-    //    private void KeyboardNavigation(Event ev)
-    //    {
-    //        if (ev.keyCode == KeyCode.DownArrow)
-    //        {
-    //            lastSelectedIndex = Mod(lastSelectedIndex + 1, shownItems.Count);
-    //            Selection.objects = new Object[] { shownItems[lastSelectedIndex] };
-    //            ev.Use();
-    //        }
-    //        else if (ev.keyCode == KeyCode.UpArrow)
-    //        {
-    //            lastSelectedIndex = Mod(lastSelectedIndex - 1, shownItems.Count);
-    //            Selection.objects = new Object[] { shownItems[lastSelectedIndex] };
-    //            ev.Use();
-    //        }
-    //        else if (ev.keyCode == KeyCode.Return)
-    //        {
-    //            var objs = shownItems.Where(x => Selection.objects.Contains(x));
-    //            foreach (var obj in objs)
-    //                DoubleClick(obj);
-    //            ev.Use();
-    //        }
-    //    }
+        void PingButtonLeftClick(Object obj)
+        {
+            if (Event.current.modifiers == EventModifiers.Alt)
+            {
+                string path = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(obj);
+                obj = AssetDatabase.LoadMainAssetAtPath(path);
+                EditorGUIUtility.PingObject(obj);
+            }
+            else EditorGUIUtility.PingObject(obj);
+        }
+
+        void PingButtonRightClick(Object obj)
+        {
+            OpenPropertyEditor(obj);
+        }
+
+        void PingButtonMiddleClick(Object obj, Action pingButtonMiddleClick = null)
+        {
+            if (Event.current.modifiers == EventModifiers.Alt)
+                Debug.Log($"{GlobalObjectId.GetGlobalObjectIdSlow(obj)} InstanceID: {obj.GetInstanceID()}");
+            else pingButtonMiddleClick?.Invoke();
+        }
     }
 }

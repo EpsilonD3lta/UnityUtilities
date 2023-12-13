@@ -1,11 +1,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
+using static EditorHelper;
+using static MyGUI;
 
-public class FindUnusedAssets : EditorWindow
+public class FindUnusedAssets : MyEditorWindow
 {
     private static readonly string[] excludedExtensions =
 {
@@ -14,17 +15,61 @@ public class FindUnusedAssets : EditorWindow
        "xml", "json", "txt", "md", "pdf",
        "asmdef", "asmref",
     };
+    private static TreeViewComparer treeViewComparer = new();
 
     private List<Object> unusedAssets = new();
     private string subfolder = "";
     private bool canceled = false;
     private Vector2 scroll = Vector2.zero;
+    private int lastSelectedIndex = -1;
 
     [MenuItem("Tools/Find Unused Assets")]
     public static void CreateWindow()
     {
         FindUnusedAssets window = GetWindow<FindUnusedAssets>();
         window.Show();
+    }
+
+    private void OnEnable()
+    {
+        wantsMouseEnterLeaveWindow = true;
+        wantsMouseMove = true;
+    }
+
+    private void OnGUI()
+    {
+        var ev = Event.current;
+        if (ev.type == EventType.MouseMove) Repaint();
+        if (ev.type == EventType.KeyDown) KeyboardNavigation(ev, ref lastSelectedIndex, unusedAssets);
+
+        GUILayout.BeginHorizontal();
+        GUIContent labelContent = new GUIContent("Subfolder:", "\"Assets/\" + subFolder");
+        GUILayout.Label(labelContent, GUILayout.MaxWidth(65));
+        subfolder = GUILayout.TextField(subfolder);
+        GUIContent searchContent = EditorGUIUtility.IconContent("Search Icon");
+        if (GUILayout.Button(searchContent, GUILayout.MaxWidth(40), GUILayout.MaxHeight(20)))
+        {
+            FindUnused();
+        }
+        GUILayout.EndHorizontal();
+
+        GUILayout.Label($"Unused Assets: ({unusedAssets.Count})", EditorStyles.boldLabel);
+        EditorGUILayout.Space();
+
+        bool isAnyHover = false;
+        scroll = EditorGUILayout.BeginScrollView(scroll);
+        for (int i = 1; i < unusedAssets.Count; i++)
+        {
+            var obj = unusedAssets[i];
+            if (obj == null) continue;
+
+            var guiStyle = new GUIStyle(); guiStyle.margin = new RectOffset();
+            Rect rect = EditorGUILayout.GetControlRect(false, objectRowHeight, guiStyle);
+            var buttonResult = ObjectRow(rect, i, obj, unusedAssets, ref lastSelectedIndex);
+            if (buttonResult.isHovered) { isAnyHover = true; hoverObject = obj; }
+        }
+        if (!isAnyHover) hoverObject = null;
+        EditorGUILayout.EndScrollView();
     }
 
     private async void FindUnused()
@@ -95,7 +140,7 @@ public class FindUnusedAssets : EditorWindow
             }
 
         }
-        unusedAssetPaths = unusedAssetPaths.OrderBy(x => x, new EditorHelper.TreeViewComparer()).ToList();
+        unusedAssetPaths = unusedAssetPaths.OrderBy(x => x, treeViewComparer).ToList();
         unusedAssets = unusedAssetPaths.Select(x => AssetDatabase.LoadMainAssetAtPath(x)).ToList();
 
         EditorUtility.ClearProgressBar();
@@ -106,32 +151,5 @@ public class FindUnusedAssets : EditorWindow
     {
         var usedBy = FindAssetUsages.FindObjectUsageSync(obj);
         return usedBy.Any();
-    }
-
-    private void OnGUI()
-    {
-        GUILayout.BeginHorizontal();
-        GUIContent labelContent = new GUIContent("Subfolder:", "\"Assets/\" + subFolder");
-        GUILayout.Label(labelContent, GUILayout.MaxWidth(65));
-        subfolder = GUILayout.TextField(subfolder);
-        GUIContent searchContent = EditorGUIUtility.IconContent("Search Icon");
-        if (GUILayout.Button(searchContent, GUILayout.MaxWidth(40), GUILayout.MaxHeight(20)))
-        {
-            FindUnused();
-        }
-        GUILayout.EndHorizontal();
-
-        GUILayout.Label($"Unused Assets: ({unusedAssets.Count})", EditorStyles.boldLabel);
-        EditorGUILayout.Space();
-
-        scroll = EditorGUILayout.BeginScrollView(scroll);
-        foreach (var asset in unusedAssets)
-        {
-            if (asset == null) continue;
-            EditorGUILayout.LabelField(AssetDatabase.GetAssetPath(asset));
-            EditorGUILayout.ObjectField(asset, asset.GetType(), true);
-            EditorGUILayout.Space();
-        }
-        EditorGUILayout.EndScrollView();
     }
 }

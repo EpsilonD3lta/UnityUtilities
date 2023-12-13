@@ -5,15 +5,19 @@ using UnityEditor;
 using UnityEditor.Search;
 using UnityEngine;
 using static EditorHelper;
+using static MyGUI;
 using Object = UnityEngine.Object;
 
-public class FindAssetUsages : EditorWindow
+public class FindAssetUsages : MyEditorWindow
 {
     private static TreeViewComparer treeViewComparer = new();
 
-    private List<Object> usedByObjects = new();
     private Object selectedObject;
+    private List<Object> usedByObjects = new();
+    private List<Object> shownItems = new();
     private Vector2 scroll = Vector2.zero;
+    private int lastSelectedIndex = -1;
+    private bool adjustSize;
 
     [MenuItem("Assets/Find Asset Usage _#F12")]
     public static async void CreateWindow()
@@ -24,42 +28,68 @@ public class FindAssetUsages : EditorWindow
         if (Selection.objects.Length > 0)
             window.selectedObject = Selection.objects[0];
 
-        window.usedByObjects = await FindObjectUsageAsync(window.selectedObject, true, true);
+        await window.Find();
         window.Repaint();
+    }
+
+    private void OnEnable()
+    {
+        wantsMouseEnterLeaveWindow = true;
+        wantsMouseMove = true;
     }
 
     private void OnGUI()
     {
+        var ev = Event.current;
+        if (ev.type == EventType.MouseMove) Repaint();
+        if (ev.type == EventType.KeyDown) KeyboardNavigation(ev, ref lastSelectedIndex, shownItems);
+        bool isAnyHover = false;
         GUILayout.BeginHorizontal();
-        EditorGUILayout.ObjectField(selectedObject, selectedObject.GetType(), true);
-        GUIContent searchContent = EditorGUIUtility.IconContent("Search Icon");
-        if (GUILayout.Button(searchContent, GUILayout.MaxWidth(40), GUILayout.MaxHeight(18)))
+        if (shownItems.Count > 0)
         {
-            Find();
+            Rect rect = EditorGUILayout.GetControlRect(false, objectRowHeight);
+            var buttonResult = ObjectRow(rect, 0, shownItems[0], shownItems, ref lastSelectedIndex);
+            if (buttonResult.isHovered) { isAnyHover = true; hoverObject = shownItems[0]; }
         }
-        GUILayout.EndHorizontal();
-        EditorGUILayout.Space();
 
-        GUILayout.Label("Found Asset References", EditorStyles.boldLabel);
-        EditorGUILayout.Space();
+        GUIContent searchContent = EditorGUIUtility.IconContent("Search Icon");
+        if (GUILayout.Button(searchContent, GUILayout.MaxWidth(40), GUILayout.MaxHeight(16)))
+            _ = Find();
+
+        GUILayout.EndHorizontal();
+        GUILayout.Label("Is Used By:", EditorStyles.boldLabel, GUILayout.MaxHeight(16));
 
         scroll = EditorGUILayout.BeginScrollView(scroll);
-        foreach (var asset in usedByObjects)
+        for (int i = 1; i < shownItems.Count; i++)
         {
-            EditorGUILayout.LabelField(AssetDatabase.GetAssetPath(asset));
-            if (asset != null)
-            {
-                var type = asset.GetType();
-                EditorGUILayout.ObjectField(asset, type, true);
-            }
-            EditorGUILayout.Space();
+            var obj = shownItems[i];
+            if (obj == null) continue;
+
+            var guiStyle = new GUIStyle(); guiStyle.margin = new RectOffset();
+            Rect rect = EditorGUILayout.GetControlRect(false, objectRowHeight, guiStyle);
+            var buttonResult = ObjectRow(rect, i, obj, shownItems, ref lastSelectedIndex);
+            if (buttonResult.isHovered) { isAnyHover = true; hoverObject = obj; }
         }
+        if (!isAnyHover) hoverObject = null;
         EditorGUILayout.EndScrollView();
+        if (adjustSize)
+        {
+            float height = shownItems.Count * objectRowHeight + 30;
+            float windowHeight = Mathf.Min(height, 1200f);
+            if (adjustSize) windowHeight = Mathf.Max(windowHeight, position.height); // Enlarge only
+            position = new Rect(position.position,
+                new Vector2(position.width, windowHeight));
+            adjustSize = false;
+        }
     }
 
-    private async void Find()
+    private async Task Find()
     {
         usedByObjects = await FindObjectUsageAsync(selectedObject, true, true);
+        shownItems.Clear();
+        shownItems.Add(selectedObject);
+        shownItems.AddRange(usedByObjects);
+        adjustSize = true;
         Repaint();
     }
 

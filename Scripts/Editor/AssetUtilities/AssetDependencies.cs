@@ -174,7 +174,7 @@ public class AssetDependencies : MyEditorWindow, IHasCustomMenu
         bool isAnyHover = false;
 
         if (ev.type == EventType.MouseMove) Repaint();
-        if (ev.type == EventType.KeyDown) MyGUI.KeyboardNavigation(ev, ref lastSelectedIndex, shownItems);
+        if (ev.type == EventType.KeyDown) KeyboardNavigation(ev, ref lastSelectedIndex, shownItems);
 
         var scrollRectHeight = height;
         var scrollRectWidth = columnWidth;
@@ -199,7 +199,8 @@ public class AssetDependencies : MyEditorWindow, IHasCustomMenu
                 var obj = shownItems[i];
                 if (obj == null) continue;
 
-                var isHover = ObjectRow(i, obj, xPos, yPos, columnWidth);
+                Rect rect = new Rect(xPos, yPos, columnWidth, rowHeight);
+                var (isHover, _) = ObjectRow(rect, i, obj, shownItems, ref lastSelectedIndex);
                 if (isHover) { isAnyHover = true; hoverObject = obj; }
                 yPos += rowHeight;
                 i++;
@@ -220,7 +221,8 @@ public class AssetDependencies : MyEditorWindow, IHasCustomMenu
 
                 string pingButtonContent = uses.Contains(shownItems[i]) ? "U" : "";
                 pingButtonContent = usedBy.Contains(shownItems[i]) ? "I" : "" + pingButtonContent;
-                var isHover = ObjectRow(i, obj, xPos, yPos, columnWidth, pingButtonContent);
+                Rect rect = new Rect(xPos, yPos, columnWidth, rowHeight);
+                var (isHover, _) = ObjectRow(rect, i, obj, shownItems, ref lastSelectedIndex, pingButtonContent);
                 if (isHover) { isAnyHover = true; hoverObject = obj; }
                 yPos += rowHeight;
                 i++;
@@ -237,7 +239,8 @@ public class AssetDependencies : MyEditorWindow, IHasCustomMenu
                 var obj = shownItems[i];
                 if (obj == null) continue;
 
-                var isHover = ObjectRow(i, obj, xPos, yPos, columnWidth);
+                Rect rect = new Rect(xPos, yPos, columnWidth, rowHeight);
+                var (isHover, _) = ObjectRow(rect, i, obj, shownItems, ref lastSelectedIndex);
                 if (isHover) { isAnyHover = true; hoverObject = obj; }
                 yPos += rowHeight;
                 i++;
@@ -261,7 +264,8 @@ public class AssetDependencies : MyEditorWindow, IHasCustomMenu
                 var obj = shownItems[i];
                 if (obj == null) continue;
 
-                var isHover = ObjectRow(i, obj, xPos, yPos, columnWidth);
+                Rect rect = new Rect(xPos, yPos, columnWidth, rowHeight);
+                var (isHover, _) = ObjectRow(rect, i, obj, shownItems, ref lastSelectedIndex);
                 if (isHover) { isAnyHover = true; hoverObject = obj; }
                 yPos += rowHeight;
                 i++;
@@ -278,7 +282,8 @@ public class AssetDependencies : MyEditorWindow, IHasCustomMenu
                 var obj = shownItems[i];
                 if (obj == null) continue;
 
-                var isHover = ObjectRow(i, obj, xPos, yPos, columnWidth);
+                Rect rect = new Rect(xPos, yPos, columnWidth, rowHeight);
+                var (isHover, _) = ObjectRow(rect, i, obj, shownItems, ref lastSelectedIndex);
                 if (isHover) { isAnyHover = true; hoverObject = obj; }
                 yPos += rowHeight;
                 i++;
@@ -297,121 +302,6 @@ public class AssetDependencies : MyEditorWindow, IHasCustomMenu
                 new Vector2(position.width, windowHeight));
             initialized = true; adjustSize = false;
         }
-    }
-
-    private bool ObjectRow(int i, Object obj,
-        float xPos, float yPos, float columnWidth, string pingButtonContent = null)
-    {
-        var ev = Event.current;
-        Rect fullRect = new Rect(xPos, yPos, columnWidth, rowHeight);
-        bool isSelected = Selection.objects.Contains(obj);
-
-        var buttonResult = DrawObjectRow(fullRect, obj, isSelected, false, pingButtonContent);
-        if (buttonResult.pingButtonClicked)
-        {
-            if (Event.current.button == 0)
-                PingButtonLeftClick(obj);
-            else if (Event.current.button == 1)
-                PingButtonRightClick(obj);
-            else if (Event.current.button == 2)
-                PingButtonMiddleClick(obj);
-        }
-
-        if (buttonResult.isShortRectHovered)
-        {
-            if (ev.type == EventType.MouseUp && ev.button == 0 && ev.clickCount == 1) // Select on MouseUp
-            {
-                LeftMouseUp(obj, isSelected, i);
-                ev.Use();
-            }
-            else if (ev.type == EventType.MouseDown && ev.button == 0 && ev.clickCount == 2)
-            {
-                DoubleClick(obj);
-                ev.Use();
-            }
-            else if (ev.type == EventType.MouseDown && ev.button == 1)
-            {
-                RightClick(obj, i);
-                ev.Use();
-            }
-            else if (ev.type == EventType.ContextClick)
-            {
-                ContextClick(new Rect(ev.mousePosition.x, ev.mousePosition.y, 0, 0), obj);
-            }
-        }
-        return buttonResult.isHovered;
-    }
-
-    private void LeftMouseUp(Object obj, bool isSelected, int i)
-    {
-        lastSelectedIndex = i;
-        var ev = Event.current;
-        if (ev.modifiers == EventModifiers.Control) // Ctrl select
-            if (!isSelected) Selection.objects = Selection.objects.Append(obj).ToArray();
-            else Selection.objects = Selection.objects.Where(x => x != obj).ToArray();
-        else if (ev.modifiers == EventModifiers.Shift) // Shift select
-        {
-            int firstSelected = shownItems.FindIndex(x => Selection.objects.Contains(x));
-            if (firstSelected != -1)
-            {
-                int startIndex = Mathf.Min(firstSelected + 1, i);
-                int count = Mathf.Abs(firstSelected - i);
-                Selection.objects = Selection.objects.
-                    Concat(shownItems.GetRange(startIndex, count)).Distinct().ToArray();
-            }
-            else Selection.objects = Selection.objects.Append(obj).ToArray();
-        }
-        else
-        {
-            Selection.activeObject = obj; // Ordinary select
-            Selection.objects = new Object[] { obj };
-        }
-    }
-
-    private void DoubleClick(Object obj)
-    {
-        OpenObject(obj);
-    }
-
-    // This is different event then context click, bot are executed, context after right click
-    private void RightClick(Object obj, int i)
-    {
-        lastSelectedIndex = i;
-        Selection.activeObject = obj;
-    }
-
-    private void ContextClick(Rect rect, Object obj)
-    {
-        Selection.activeObject = obj;
-        if (IsComponent(obj)) OpenObjectContextMenu(rect, obj);
-        else if (IsAsset(obj)) EditorUtility.DisplayPopupMenu(rect, "Assets/", null);
-        else if (IsNonAssetGameObject(obj))
-        {
-            if (Selection.transforms.Length > 0) // Just to be sure it's really a HierarchyGameobject
-                OpenHierarchyContextMenu(Selection.transforms[0].gameObject.GetInstanceID());
-        }
-    }
-
-    private void PingButtonLeftClick(Object obj)
-    {
-        if (Event.current.modifiers == EventModifiers.Alt) // Add or remove pinned item
-        {
-            string path = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(obj);
-            obj = AssetDatabase.LoadMainAssetAtPath(path);
-            EditorGUIUtility.PingObject(obj);
-        }
-        else EditorGUIUtility.PingObject(obj);
-    }
-
-    private void PingButtonRightClick(Object obj)
-    {
-        OpenPropertyEditor(obj);
-    }
-
-    private void PingButtonMiddleClick(Object obj)
-    {
-        if (Event.current.modifiers == EventModifiers.Alt)
-            Debug.Log($"{GlobalObjectId.GetGlobalObjectIdSlow(obj)} InstanceID: {obj.GetInstanceID()}");
     }
 
     #region Drawing

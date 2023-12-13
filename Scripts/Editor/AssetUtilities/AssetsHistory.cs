@@ -8,8 +8,6 @@ using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
 using static EditorHelper;
 using static MyGUI;
-using UnityEditor.PackageManager.UI;
-using System.IO;
 
 public class AssetsHistory : MyEditorWindow, IHasCustomMenu
 {
@@ -64,7 +62,6 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
         EditorSceneManager.sceneOpened += SceneOpened;
         EditorApplication.quitting -= SaveHistoryToEditorPrefs;
         EditorApplication.quitting += SaveHistoryToEditorPrefs;
-        DragAndDrop.AddDropHandler(OnDragDroppedToProjectTab);
         wantsMouseEnterLeaveWindow = true;
         wantsMouseMove = true;
 
@@ -73,7 +70,7 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
 
     protected virtual void OnDisable()
     {
-        DragAndDrop.RemoveDropHandler(OnDragDroppedToProjectTab);
+
     }
 
     protected virtual void OnDestroy()
@@ -119,114 +116,29 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
                 continue;
             }
 
-            Rect fullRect = new Rect(xPos, yPos, columnWidth, rowHeight);
+            Rect rect = new Rect(xPos, yPos, columnWidth, rowHeight);
             bool isSelected = Selection.objects.Contains(obj);
             bool isPinned = pinned.Contains(obj);
 
-            var buttonResult = DrawObjectRow(fullRect, obj, isSelected, isPinned);
+            var b = ObjectRow(rect, i, obj, groupedHistory, ref lastSelectedIndex, null, isPinned,
+                () => MiddleClick(obj, isSelected, isPinned, ref shouldLimitAndOrderHistory),
+                () => PingButtonMiddleClick(obj, isPinned, ref shouldLimitAndOrderHistory),
+                () => DragStarted(obj, isSelected),
+                () => DragPerformed(obj, i, isPinned, ref shouldLimitAndOrderHistory));
 
-            if (buttonResult.isHovered) isAnyHover = true;
-            if (buttonResult.isHovered) hoverObject = obj;
-            if (buttonResult.pingButtonClicked)
+            if (b.isHovered)
             {
-                if (Event.current.button == 0)
-                    PingButtonLeftClick(obj);
-                else if (Event.current.button == 1)
-                    PingButtonRightClick(obj);
-                else if (Event.current.button == 2)
-                    if (PingButtonMiddleClick(obj, isPinned))
-                        shouldLimitAndOrderHistory = true;
-            }
-
-            if (buttonResult.isShortRectHovered)
-            {
-                if (ev.type == EventType.MouseUp && ev.button == 0 && ev.clickCount == 1)
-                {
-                    LeftMouseUp(obj, isSelected, i); // Select on MouseUp
-                    ev.Use();
-                }
-                else if (ev.type == EventType.MouseDown && ev.button == 0 && ev.clickCount == 2)
-                {
-                    DoubleClick(obj);
-                    ev.Use();
-                }
-                else if (ev.type == EventType.MouseDown && ev.button == 1)
-                {
-                    RightClick(obj, i);
-                    ev.Use();
-                }
-                else if (ev.type == EventType.ContextClick)
-                {
-                    ContextClick(new Rect(ev.mousePosition.x, ev.mousePosition.y, 0, 0), obj);
-                }
-                else if (ev.type == EventType.MouseDown && ev.button == 2)
-                {
-                    MiddleClick(obj, isSelected, isPinned, ref shouldLimitAndOrderHistory);
-                }
-                // Drag
-                else if (ev.type == EventType.MouseDrag && ev.button == 0 && // Start dragging this asset
-                    DragAndDrop.visualMode == DragAndDropVisualMode.None)
-                {
-                    DragAndDrop.PrepareStartDrag();
-                    DragAndDrop.SetGenericData("StartedInAssetsHistoryWindow", true);
-                    DragAndDrop.visualMode = DragAndDropVisualMode.Move;
-                    if (isSelected)
-                        DragAndDrop.objectReferences = groupedHistory.Where(x => Selection.objects.Contains(x))
-                        .ToArray();
-                    else DragAndDrop.objectReferences = new Object[] { obj };
-                    DragAndDrop.StartDrag("AssetsHistory Drag");
-                    ev.Use();
-                }
-                else if (ev.type == EventType.DragUpdated && ev.button == 0) // Update drag
-                {
-                    DragAndDrop.visualMode = DragAndDropVisualMode.Generic;
-                    GUI.Label(fullRect, GUIContent.none, Styles.insertion);
-                    ev.Use();
-                }
-                else if (ev.type == EventType.DragPerform && ev.button == 0 && isPinned) // Receive drag and drop
-                {
-                    DragAndDrop.AcceptDrag();
-                    int k = 0; // Insert would revert order if we do not compensate
-                    foreach (var droppedObj in DragAndDrop.objectReferences)
-                    {
-                        if (!pinned.Contains(droppedObj)) AddPinned(droppedObj, i);
-                        else if (pinned.IndexOf(droppedObj) != i)
-                        {
-                            int insertIndex = pinned.IndexOf(droppedObj) > i ? i + k : i - 1;
-                            RemovePinned(droppedObj);
-                            AddPinned(droppedObj, insertIndex);
-                        }
-                        k++;
-                    }
-                    shouldLimitAndOrderHistory = true;
-                    ev.Use();
-                }
-                // Prevent accidental drags
-                else if (ev.type == EventType.DragPerform && ev.button == 0)
-                {
-                    var dragData = DragAndDrop.GetGenericData("StartedInAssetsHistoryWindow");
-                    bool preventDrop = dragData is bool b && b && DragAndDrop.objectReferences.Length == 1 &&
-                        DragAndDrop.objectReferences[0] == obj; // Same object row
-                    if (preventDrop)
-                    {
-                        DragAndDrop.AcceptDrag();
-                        ev.Use();
-                    }
-                }
-                // Draw insertion line
-                if (isPinned && DragAndDrop.visualMode != DragAndDropVisualMode.None)
-                {
-                    DrawDragInsertionLine(fullRect);
-                }
+                isAnyHover = true;
+                hoverObject = obj;
             }
 
             // Draw insertion line at the end of pinned if dragging and mouse position is not above any pinned asset
             if (!isAnyShortRectHover && i == pinned.Count && DragAndDrop.visualMode != DragAndDropVisualMode.None)
             {
-                DrawDragInsertionLine(fullRect);
+                DrawDragInsertionLine(rect);
             }
 
-            if (buttonResult.isShortRectHovered) isAnyShortRectHover = true;
+            if (b.isShortRectHovered) isAnyShortRectHover = true;
             yPos += rowHeight;
             if ((i + 1) % lines == 0) { xPos += columnWidth; yPos = 0; } // Draw next column
         }
@@ -245,57 +157,6 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
         }
         if (shouldLimitAndOrderHistory) LimitAndOrderHistory();
         if (!isAnyHover) hoverObject = null;
-    }
-
-    private void LeftMouseUp(Object obj, bool isSelected, int i)
-    {
-        lastSelectedIndex = i;
-        var ev = Event.current;
-        if (ev.modifiers == EventModifiers.Control) // Ctrl select
-            if (!isSelected) Selection.objects = Selection.objects.Append(obj).ToArray();
-            else Selection.objects = Selection.objects.Where(x => x != obj).ToArray();
-        else if (ev.modifiers == EventModifiers.Shift) // Shift select
-        {
-            int firstSelected = groupedHistory.FindIndex(x => Selection.objects.Contains(x));
-            if (firstSelected != -1)
-            {
-                int startIndex = Mathf.Min(firstSelected + 1, i);
-                int count = Mathf.Abs(firstSelected - i);
-                Selection.objects = Selection.objects.
-                    Concat(groupedHistory.GetRange(startIndex, count)).Distinct().ToArray();
-            }
-            else Selection.objects = Selection.objects.Append(obj).ToArray();
-        }
-        else
-        {
-            Selection.activeObject = obj; // Ordinary select
-            if (AssetDatabase.IsValidFolder(AssetDatabase.GetAssetPath(obj)))
-                ExpandFolder(obj.GetInstanceID(), true);
-        }
-    }
-
-    private void DoubleClick(Object obj)
-    {
-        OpenObject(obj);
-    }
-
-    // This is different event then context click, bot are executed, context after right click
-    private void RightClick(Object obj, int i)
-    {
-        lastSelectedIndex = i;
-        Selection.activeObject = obj;
-    }
-
-    private void ContextClick(Rect rect, Object obj)
-    {
-        Selection.activeObject = obj;
-        if (IsComponent(obj)) OpenObjectContextMenu(rect, obj);
-        else if (IsAsset(obj)) EditorUtility.DisplayPopupMenu(rect, "Assets/", null);
-        else if (IsNonAssetGameObject(obj))
-        {
-            if (Selection.transforms.Length > 0) // Just to be sure it's really a HierarchyGameobject
-                OpenHierarchyContextMenu(Selection.transforms[0].gameObject.GetInstanceID());
-        }
     }
 
     private void MiddleClick(Object obj, bool isSelected, bool isPinned, ref bool shouldLimitAndOrderHistory)
@@ -319,34 +180,11 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
         Repaint();
     }
 
-    private void PingButtonLeftClick(Object obj)
+    private void PingButtonMiddleClick(Object obj, bool isPinned, ref bool shouldLimitAndOrderHistory)
     {
-        if (Event.current.modifiers == EventModifiers.Alt) // Add or remove pinned item
-        {
-            string path = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(obj);
-            obj = AssetDatabase.LoadMainAssetAtPath(path);
-            EditorGUIUtility.PingObject(obj);
-        }
-        else EditorGUIUtility.PingObject(obj);
-    }
-
-    private void PingButtonRightClick(Object obj)
-    {
-        OpenPropertyEditor(obj);
-    }
-
-    private bool PingButtonMiddleClick(Object obj, bool isPinned)
-    {
-        bool dirtied = false;
-        if (Event.current.modifiers == EventModifiers.Alt)
-            Debug.Log($"{GlobalObjectId.GetGlobalObjectIdSlow(obj)} InstanceID: {obj.GetInstanceID()}");
-        else
-        {
-            if (!isPinned) AddPinned(obj);
-            else RemovePinned(obj);
-            dirtied = true; // Only return dirtied if we change something
-        }
-        return dirtied;
+        if (!isPinned) AddPinned(obj);
+        else RemovePinned(obj);
+        shouldLimitAndOrderHistory = true; // Only return dirtied if we change something
     }
 
     private void DropObjectToWindow()
@@ -357,25 +195,47 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
         }
     }
 
-    private DragAndDropVisualMode OnDragDroppedToProjectTab(int dragInstanceId, string dropUponPath, bool perform)
+    // Drag started from ObjectRow
+    private void DragStarted(Object obj, bool isSelected)
     {
-        if (!perform) return DragAndDropVisualMode.None; // Next Handler in order will handle this drag (Unity default)
-        if (!AssetDatabase.IsValidFolder(dropUponPath)) return DragAndDropVisualMode.None;
-        var dragData = DragAndDrop.GetGenericData("StartedInAssetsHistoryWindow");
-        if (!(dragData is bool b && b))
-            return DragAndDropVisualMode.None;
-        foreach (var droppedObj in DragAndDrop.objectReferences)
+        DragAndDrop.SetGenericData(GetInstanceID().ToString(), true);
+    }
+
+
+    // Drag performed on pinned or not pinned ObjectRow
+    private void DragPerformed(Object obj, int i, bool isPinned, ref bool shouldLimitAndOrderHistory)
+    {
+        var ev = Event.current;
+        if (isPinned)
         {
-            if (IsAsset(droppedObj))
+            DragAndDrop.AcceptDrag();
+            int k = 0; // Insert would revert order if we do not compensate
+            foreach (var droppedObj in DragAndDrop.objectReferences)
             {
-                var oldPath = AssetDatabase.GetAssetPath(droppedObj);
-                var assetName = Path.GetFileName(oldPath);
-                var newPath = dropUponPath + "/" + assetName;
-                AssetDatabase.MoveAsset(oldPath, newPath);
+                if (!pinned.Contains(droppedObj)) AddPinned(droppedObj, i);
+                else if (pinned.IndexOf(droppedObj) != i)
+                {
+                    int insertIndex = pinned.IndexOf(droppedObj) > i ? i + k : i - 1;
+                    RemovePinned(droppedObj);
+                    AddPinned(droppedObj, insertIndex);
+                }
+                k++;
+            }
+            shouldLimitAndOrderHistory = true;
+            ev.Use();
+        }
+        // Prevent accidental drags
+        else if (ev.type == EventType.DragPerform && ev.button == 0)
+        {
+            var dragData = DragAndDrop.GetGenericData(GetInstanceID().ToString());
+            bool preventDrop = dragData is bool b && b && DragAndDrop.objectReferences.Length == 1 &&
+                DragAndDrop.objectReferences[0] == obj; // Same object row
+            if (preventDrop)
+            {
+                DragAndDrop.AcceptDrag();
+                ev.Use();
             }
         }
-        AssetDatabase.Refresh();
-        return DragAndDropVisualMode.Move;
     }
 
     private void OnDeleteKey()
