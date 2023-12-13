@@ -34,7 +34,7 @@ public class AssetDependencies : MyEditorWindow, IHasCustomMenu
     private bool isContainsName = false; // name without file extension
     private bool showUses = true;
     private bool isRecursive = false;
-    private bool showUsedBy = false;
+    private bool showUsedBy = true;
     private bool searchInScene = true;
     private bool showPackages = false;
     private bool isPackageRecursive = false;
