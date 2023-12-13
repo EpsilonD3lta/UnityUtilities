@@ -8,6 +8,8 @@ using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
 using static EditorHelper;
 using static MyGUI;
+using UnityEditor.PackageManager.UI;
+using System.IO;
 
 public class AssetsHistory : MyEditorWindow, IHasCustomMenu
 {
@@ -62,10 +64,16 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
         EditorSceneManager.sceneOpened += SceneOpened;
         EditorApplication.quitting -= SaveHistoryToEditorPrefs;
         EditorApplication.quitting += SaveHistoryToEditorPrefs;
+        DragAndDrop.AddDropHandler(OnDragDroppedToProjectTab);
         wantsMouseEnterLeaveWindow = true;
         wantsMouseMove = true;
 
         LimitAndOrderHistory();
+    }
+
+    private void OnDisable()
+    {
+        DragAndDrop.RemoveDropHandler(OnDragDroppedToProjectTab);
     }
 
     // This is received only when window is visible
@@ -114,7 +122,6 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
 
             if (buttonResult.isHovered) isAnyHover = true;
             if (buttonResult.isHovered) hoverObject = obj;
-            if (buttonResult.isShortRectHovered) isAnyShortRectHover = true;
             if (buttonResult.pingButtonClicked)
             {
                 if (Event.current.button == 0)
@@ -194,24 +201,27 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
                 {
                     var dragData = DragAndDrop.GetGenericData("StartedInAssetsHistoryWindow");
                     bool preventDrop = dragData is bool b && b && DragAndDrop.objectReferences.Length == 1 &&
-                        DragAndDrop.objectReferences[0] == obj;
+                        DragAndDrop.objectReferences[0] == obj; // Same object row
                     if (preventDrop)
                     {
                         DragAndDrop.AcceptDrag();
                         ev.Use();
                     }
                 }
+                // Draw insertion line
+                if (isPinned && DragAndDrop.visualMode != DragAndDropVisualMode.None)
+                {
+                    DrawDragInsertionLine(fullRect);
+                }
             }
-            // Draw insertion line
-            if (buttonResult.isShortRectHovered && isPinned && DragAndDrop.visualMode != DragAndDropVisualMode.None)
-            {
-                DrawDragInsertionLine(fullRect);
-            }
+
             // Draw insertion line at the end of pinned if dragging and mouse position is not above any pinned asset
             if (!isAnyShortRectHover && i == pinned.Count && DragAndDrop.visualMode != DragAndDropVisualMode.None)
             {
                 DrawDragInsertionLine(fullRect);
             }
+
+            if (buttonResult.isShortRectHovered) isAnyShortRectHover = true;
             yPos += rowHeight;
             if ((i + 1) % lines == 0) { xPos += columnWidth; yPos = 0; } // Draw next column
         }
@@ -340,6 +350,27 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
         {
             AddPinned(obj);
         }
+    }
+
+    private DragAndDropVisualMode OnDragDroppedToProjectTab(int dragInstanceId, string dropUponPath, bool perform)
+    {
+        if (!perform) return DragAndDropVisualMode.None; // Next Handler in order will handle this drag (Unity default)
+        if (!AssetDatabase.IsValidFolder(dropUponPath)) return DragAndDropVisualMode.None;
+        var dragData = DragAndDrop.GetGenericData("StartedInAssetsHistoryWindow");
+        if (!(dragData is bool b && b))
+            return DragAndDropVisualMode.None;
+        foreach (var droppedObj in DragAndDrop.objectReferences)
+        {
+            if (IsAsset(droppedObj))
+            {
+                var oldPath = AssetDatabase.GetAssetPath(droppedObj);
+                var assetName = Path.GetFileName(oldPath);
+                var newPath = dropUponPath + "/" + assetName;
+                AssetDatabase.MoveAsset(oldPath, newPath);
+            }
+        }
+        AssetDatabase.Refresh();
+        return DragAndDropVisualMode.Move;
     }
 
     private void OnDeleteKey()
