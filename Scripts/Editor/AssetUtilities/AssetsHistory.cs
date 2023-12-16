@@ -121,6 +121,7 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
             bool isPinned = pinned.Contains(obj);
 
             var b = ObjectRow(rect, i, obj, groupedHistory, ref lastSelectedIndex, null, isPinned,
+                null,
                 () => MiddleClick(obj, isSelected, isPinned, ref shouldLimitAndOrderHistory),
                 () => PingButtonMiddleClick(obj, isPinned, ref shouldLimitAndOrderHistory),
                 () => DragStarted(obj, isSelected),

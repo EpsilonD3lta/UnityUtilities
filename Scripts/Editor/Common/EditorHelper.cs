@@ -256,6 +256,11 @@ public class EditorHelper
             AssetDatabase.Refresh();
             return DragAndDropVisualMode.Move;
         }
+
+        protected void OnEscapeKey()
+        {
+            if (!docked) Close();
+        }
     }
     #endregion
 }

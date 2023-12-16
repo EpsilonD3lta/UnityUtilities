@@ -40,7 +40,8 @@ public class FindUnusedAssets : MyEditorWindow
     {
         var ev = Event.current;
         if (ev.type == EventType.MouseMove) Repaint();
-        if (ev.type == EventType.KeyDown) KeyboardNavigation(ev, ref lastSelectedIndex, unusedAssets);
+        if (ev.type == EventType.KeyDown) KeyboardNavigation(
+            ev, ref lastSelectedIndex, unusedAssets, escapeKey: OnEscapeKey);
 
         GUILayout.BeginHorizontal();
         GUIContent labelContent = new GUIContent("Subfolder:", "\"Assets/\" + subFolder");

@@ -118,7 +118,7 @@ public static class MyGUI
     }
 
     public static void KeyboardNavigation(Event ev, ref int lastSelectedIndex, List<Object> shownItems,
-        Action deleteKey = null)
+        Action deleteKey = null, Action enterKey = null, Action escapeKey = null)
     {
         if (ev.keyCode == KeyCode.DownArrow)
         {
@@ -132,11 +132,12 @@ public static class MyGUI
             Selection.objects = new Object[] { shownItems[lastSelectedIndex] };
             ev.Use();
         }
-        else if (ev.keyCode == KeyCode.Return)
+        else if (ev.keyCode == KeyCode.Return || ev.keyCode == KeyCode.KeypadEnter)
         {
             var objs = shownItems.Where(x => Selection.objects.Contains(x));
             foreach (var obj in objs)
                 OpenObject(obj);
+            enterKey?.Invoke();
             ev.Use();
         }
         else if (ev.keyCode == KeyCode.Delete)
@@ -144,11 +145,16 @@ public static class MyGUI
             deleteKey?.Invoke();
             ev.Use();
         }
+        else if (ev.keyCode == KeyCode.Escape)
+        {
+            escapeKey?.Invoke();
+            ev.Use();
+        }
     }
 
     public static (bool isHovered, bool isShortRectHovered)
         ObjectRow(Rect rect, int i, Object obj, List<Object> shownItems, ref int lastSelectedIndex,
-        string pingButtonContent = null, bool isPinned = false, Action middleClick = null,
+        string pingButtonContent = null, bool isPinned = false, Action doubleClick = null, Action middleClick = null,
         Action pingButtonMiddleClick = null, Action dragStarted = null, Action dragPerformed = null)
     {
         var ev = Event.current;
@@ -253,6 +259,7 @@ public static class MyGUI
         void DoubleClick(Object obj)
         {
             OpenObject(obj);
+            doubleClick?.Invoke();
             ev.Use();
         }
 

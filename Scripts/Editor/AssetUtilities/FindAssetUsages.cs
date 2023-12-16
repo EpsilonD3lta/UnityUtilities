@@ -42,7 +42,8 @@ public class FindAssetUsages : MyEditorWindow
     {
         var ev = Event.current;
         if (ev.type == EventType.MouseMove) Repaint();
-        if (ev.type == EventType.KeyDown) KeyboardNavigation(ev, ref lastSelectedIndex, shownItems);
+        if (ev.type == EventType.KeyDown) KeyboardNavigation(
+            ev, ref lastSelectedIndex, shownItems, escapeKey: OnEscapeKey);
         bool isAnyHover = false;
         GUILayout.BeginHorizontal();
         if (shownItems.Count > 0)
