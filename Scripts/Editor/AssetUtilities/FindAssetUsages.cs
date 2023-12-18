@@ -110,7 +110,10 @@ public class FindAssetUsages : MyEditorWindow
 
         bool finished = false;
         List<SearchItem> resultItems = new();
-        SearchService.Request($"ref={objectPath}",
+        // This is copied from Unity's experimental package: https://github.com/Unity-Technologies/com.unity.search.extensions
+        // from script Dependency.cs
+        var searchContext = SearchService.CreateContext(new[] { "dep", "scene", "asset", "adb" }, $"ref=\"{objectPath}\"");
+        SearchService.Request(searchContext,
             (SearchContext context, IList<SearchItem> items)
             => Found(ref finished, items, ref resultItems));
         await WaitUntil(() => finished);
@@ -138,7 +141,8 @@ public class FindAssetUsages : MyEditorWindow
         }
 
         List<SearchItem> resultItems = new();
-        var results = SearchService.Request($"ref={objectPath}", SearchFlags.Synchronous).Fetch()
+        var searchContext = SearchService.CreateContext(new[] { "dep", "scene", "asset", "adb" }, $"ref=\"{objectPath}\"");
+        var results = SearchService.Request(searchContext, SearchFlags.Synchronous).Fetch()
             .Select(x => x.ToObject()).Where(x => x != null).ToList();
 
         if (filter) results = FilterResults(results, asset);
