@@ -20,6 +20,7 @@ public class OpenScenes : MyEditorWindow
     {
         var window = GetWindow<OpenScenes>(false, "Open Scenes");
         window.autoRepaintOnSceneChange = true;
+        window.minSize = new Vector2(100, 40);
         var scenePaths = AssetDatabase.FindAssets("t:scene", new string[] { "Assets" })
             .Select(x => AssetDatabase.GUIDToAssetPath(x)).OrderBy(x => x, treeViewComparer);
         window.sceneAssets = scenePaths.Select(x => AssetDatabase.LoadMainAssetAtPath(x)).ToList();
