@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
+using Debug = UnityEngine.Debug;
 
 public class AppDataUtility : EditorWindow
 {
@@ -22,7 +23,8 @@ public class AppDataUtility : EditorWindow
 #if UNITY_EDITOR_OSX
         EditorUtility.RevealInFinder(Application.persistentDataPath);
 #else
-        if (GUILayout.Button("Show Folder"))
+        if (GUILayout.Button(EditorGUIUtility.IconContent("FolderOpened Icon"),
+            GUILayout.MaxWidth(40), GUILayout.MaxHeight(17)))
         {
             string assetPath = Application.persistentDataPath;
             assetPath = "\"" + assetPath + "\"";
@@ -55,19 +57,66 @@ public class AppDataUtility : EditorWindow
                     file.Delete();
                 foreach (var dir in directoryInfo.GetDirectories())
                     dir.Delete(true);
-                UnityEngine.Debug.LogWarning("AppData Utility: All folder contents were deleted.");
+                Debug.LogWarning("[AppData Utility] All folder contents were deleted.");
             }
         }
 
-        if (GUILayout.Button("Delete all PlayerPrefs"))
+        if (GUILayout.Button("Delete PlayerPrefs"))
         {
             if (ev.modifiers == EventModifiers.Shift ||
                 EditorUtility.DisplayDialog("AppData Utility", "Delete all PlayerPrefs? This cannot be undone.", "Yes", "Cancel"))
             {
                 PlayerPrefs.DeleteAll();
-                UnityEngine.Debug.LogWarning("AppData Utility: All PlayerPrefs were deleted.");
+                Debug.LogWarning("AppData Utility: All PlayerPrefs were deleted.");
+            }
+        }
+        if (GUILayout.Button("Load Backup"))
+        {
+            if (ev.modifiers == EventModifiers.Shift ||
+                EditorUtility.DisplayDialog("AppData Utility", "Load Backup? This cannot be undone.", "Yes", "Cancel"))
+            {
+                var fromDir = Directory.GetParent(Application.persistentDataPath) + $"/{Application.productName}Backup";
+                var toDir = Application.persistentDataPath;
+                if (!Directory.Exists(fromDir)) Debug.LogError($"[AppData Utility] {fromDir} does not exist");
+                else if (!Directory.Exists(toDir)) Debug.LogError($"[AppData Utility] {toDir} does not exist");
+                else
+                {
+                    CopyFilesRecursively(fromDir, toDir);
+                    Debug.Log("[AppData Utility] Backup loaded");
+                }
+
+            }
+        }
+        if (GUILayout.Button("Save Backup"))
+        {
+            if (EditorUtility.DisplayDialog("AppData Utility", "Save Backup? This cannot be undone.", "Yes", "Cancel"))
+            {
+                var fromDir = Application.persistentDataPath;
+                var toDir = Directory.GetParent(Application.persistentDataPath) + $"/{Application.productName}Backup";
+                if (!Directory.Exists(fromDir)) Debug.LogError($"[AppData Utility] {fromDir} does not exist");
+                else
+                {
+                    CopyFilesRecursively(fromDir, toDir);
+                    Debug.Log("[AppData Utility] Backup saved");
+                }
+
             }
         }
         GUILayout.EndHorizontal();
+    }
+
+    private static void CopyFilesRecursively(string sourcePath, string targetPath)
+    {
+        // Create all of the directories
+        foreach (string dirPath in Directory.GetDirectories(sourcePath, "*", SearchOption.AllDirectories))
+        {
+            Directory.CreateDirectory(dirPath.Replace(sourcePath, targetPath));
+        }
+
+        // Copy all the files & Replaces any files with the same name
+        foreach (string newPath in Directory.GetFiles(sourcePath, "*", SearchOption.AllDirectories))
+        {
+            File.Copy(newPath, newPath.Replace(sourcePath, targetPath), true);
+        }
     }
 }
