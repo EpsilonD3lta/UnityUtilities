@@ -95,6 +95,12 @@ public class EditorHelper
         }
     }
 
+    [Shortcut("Mute Game View Audio", KeyCode.M)]
+    public static void MuteGameViewAudio()
+    {
+        EditorUtility.audioMasterMute = !EditorUtility.audioMasterMute;
+    }
+
     [Shortcut("Lock Inspector", KeyCode.C, ShortcutModifiers.Alt)]
     public static void ToggleInspectorLock()
     {

@@ -84,7 +84,6 @@ public class AppDataUtility : EditorWindow
                     CopyFilesRecursively(fromDir, toDir);
                     Debug.Log("[AppData Utility] Backup loaded");
                 }
-
             }
         }
         if (GUILayout.Button("Save Backup"))
@@ -99,9 +98,9 @@ public class AppDataUtility : EditorWindow
                     CopyFilesRecursively(fromDir, toDir);
                     Debug.Log("[AppData Utility] Backup saved");
                 }
-
             }
         }
+        GUILayout.FlexibleSpace();
         GUILayout.EndHorizontal();
     }
 
