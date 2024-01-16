@@ -185,6 +185,7 @@ public class AssetDependencies : MyEditorWindow, IHasCustomMenu
 
         ToggleHeader(new Rect(xPos, yPos, headerWidth, headerHeight), ref showSelected, "Selected");
         GUIContent reselectContent = EditorGUIUtility.IconContent("Grid.Default@2x");
+        reselectContent.tooltip = "Reselect"; // Tooltip parameter in IconContent not working
         if (GUI.Button(new Rect(xPos + headerWidth, yPos, 20, headerHeight + 2), reselectContent))
         {
             Select();
@@ -294,7 +295,7 @@ public class AssetDependencies : MyEditorWindow, IHasCustomMenu
         if (!isAnyHover) hoverObject = null;
 
         scrollViewRectHeight = yPos;
-        if (!initialized || adjustSize)
+        if (!docked && (!initialized || adjustSize))
         {
             float windowHeight = Mathf.Min(yPos, 600f);
             if (adjustSize) windowHeight = Mathf.Max(windowHeight, position.height); // Enlarge only
