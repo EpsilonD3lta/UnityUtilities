@@ -21,7 +21,8 @@ public class ComponentUtilities
             savedObject = new SerializedObject(property.serializedObject.targetObject);
             // savedObject.targetObject is null if we delete component in the meantime. Hence we create a copy
             savedTargetObject = Object.Instantiate(property.serializedObject.targetObject);
-            ((Component)savedTargetObject).gameObject.hideFlags = HideFlags.HideAndDontSave;
+            if (savedTargetObject is Component component) // Can be a scriptableObject
+                component.gameObject.hideFlags = HideFlags.HideAndDontSave;
 
             Debug.Log("Component copied");
         }
