@@ -8,6 +8,7 @@ using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
 using static EditorHelper;
 using static MyGUI;
+using System.IO;
 
 public class AssetsHistory : MyEditorWindow, IHasCustomMenu
 {
@@ -202,7 +203,6 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
         DragAndDrop.SetGenericData(GetInstanceID().ToString(), true);
     }
 
-
     // Drag performed on pinned or not pinned ObjectRow
     private void DragPerformed(Object obj, int i, bool isPinned, ref bool shouldLimitAndOrderHistory)
     {
@@ -378,7 +378,9 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
         if (history.Count > historyLimit)
             RemoveAllHistory(x => history.IndexOf(x) >= historyLimit);
         //history = history.Take(historyLimit).ToList();
-        groupedHistory = history.Where(x => !pinned.Contains(x)).OrderBy(x => x.GetType().Name).ThenBy(x => x.name).
+        groupedHistory = history.Where(x => !pinned.Contains(x))
+            .OrderBy(x => Path.GetExtension(AssetDatabase.GetAssetPath(x)))
+            .ThenBy(x => x.GetType().Name).ThenBy(x => x.name).
             ThenBy(x => x.GetInstanceID()).ToList();
         groupedHistory.InsertRange(0, pinned);
     }
