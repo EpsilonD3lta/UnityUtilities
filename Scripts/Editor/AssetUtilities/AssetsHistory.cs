@@ -201,6 +201,8 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
     private void DragStarted(Object obj, bool isSelected)
     {
         DragAndDrop.SetGenericData(GetInstanceID().ToString(), true);
+        // If path is empty (non-asset), paths array will not contain this path - probably internal property thing
+        DragAndDrop.paths = DragAndDrop.objectReferences.Select(x => AssetDatabase.GetAssetPath(x)).ToArray();
     }
 
     // Drag performed on pinned or not pinned ObjectRow
