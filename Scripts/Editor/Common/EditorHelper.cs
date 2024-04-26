@@ -178,6 +178,28 @@ public class EditorHelper
         return AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(obj));
     }
 
+    /// <summary> DragAndDropHandler example. Not necessary if drag has correctly set asset paths </summary>
+    private static DragAndDropVisualMode OnDragDroppedToProjectTab(int dragInstanceId, string dropUponPath, bool perform)
+    {
+        if (!perform) return DragAndDropVisualMode.None; // Next Handler in order will handle this drag (Unity default)
+        if (!AssetDatabase.IsValidFolder(dropUponPath)) return DragAndDropVisualMode.None;
+        if (DragAndDrop.paths.Length == 0) return DragAndDropVisualMode.None; // Non-asset, e.g. making a prefab from scene object
+
+        var dragData = DragAndDrop.GetGenericData(nameof(MyEditorWindow));
+        if (!(dragData is bool b && b))
+            return DragAndDropVisualMode.None;
+        var undoMethod = typeof(Undo).GetMethod("RegisterAssetsMoveUndo", BindingFlags.Static | BindingFlags.NonPublic);
+        undoMethod.Invoke(null, new object[] { DragAndDrop.paths });
+        foreach (var oldPath in DragAndDrop.paths)
+        {
+            var assetName = Path.GetFileName(oldPath);
+            var newPath = dropUponPath + "/" + assetName;
+            AssetDatabase.MoveAsset(oldPath, newPath);
+        }
+        AssetDatabase.Refresh();
+        return DragAndDropVisualMode.Move;
+    }
+
     /// <summary>
     /// Orders string paths in the same order as in Project Tab. Folders are first at the same level of depth
     /// </summary>
@@ -200,34 +222,6 @@ public class EditorHelper
     public class MyEditorWindow : EditorWindow
     {
         public Object hoverObject;
-
-        [InitializeOnLoadMethod]
-        private static void Init()
-        {
-            DragAndDrop.AddDropHandler(OnDragDroppedToProjectTab);
-        }
-
-        // Drag performed on Project Tab
-        private static DragAndDropVisualMode OnDragDroppedToProjectTab(int dragInstanceId, string dropUponPath, bool perform)
-        {
-            if (!perform) return DragAndDropVisualMode.None; // Next Handler in order will handle this drag (Unity default)
-            if (!AssetDatabase.IsValidFolder(dropUponPath)) return DragAndDropVisualMode.None;
-            if (DragAndDrop.paths.Length == 0) return DragAndDropVisualMode.None; // Non-asset, e.g. making a prefab from scene object
-
-            var dragData = DragAndDrop.GetGenericData(nameof(MyEditorWindow));
-            if (!(dragData is bool b && b))
-                return DragAndDropVisualMode.None;
-            var undoMethod = typeof(Undo).GetMethod("RegisterAssetsMoveUndo", BindingFlags.Static | BindingFlags.NonPublic);
-            undoMethod.Invoke(null, new object[] {DragAndDrop.paths});
-            foreach (var oldPath in DragAndDrop.paths)
-            {
-                var assetName = Path.GetFileName(oldPath);
-                var newPath = dropUponPath + "/" + assetName;
-                AssetDatabase.MoveAsset(oldPath, newPath);
-            }
-            AssetDatabase.Refresh();
-            return DragAndDropVisualMode.Move;
-        }
 
         protected void OnEscapeKey()
         {
