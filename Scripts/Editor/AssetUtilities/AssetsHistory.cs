@@ -9,6 +9,7 @@ using Object = UnityEngine.Object;
 using static EditorHelper;
 using static MyGUI;
 using System.IO;
+using System.Reflection;
 
 public class AssetsHistory : MyEditorWindow, IHasCustomMenu
 {
@@ -57,12 +58,19 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
         // This is received even if invisible
         Selection.selectionChanged -= SelectionChanged;
         Selection.selectionChanged += SelectionChanged;
+        DragAndDrop.RemoveDropHandler(OnDragDroppedSceneHandler);
+        DragAndDrop.AddDropHandler(OnDragDroppedSceneHandler);
+        DragAndDrop.RemoveDropHandler(OnDragDroppedHierarchyHandler);
+        DragAndDrop.AddDropHandler(OnDragDroppedHierarchyHandler);
+        DragAndDrop.RemoveDropHandler(OnDragDroppedInspectorHandler);
+        DragAndDrop.AddDropHandler(OnDragDroppedInspectorHandler);
         AssetImportHistory.assetImported -= AssetImported;
         AssetImportHistory.assetImported += AssetImported;
         EditorSceneManager.sceneOpened -= SceneOpened;
         EditorSceneManager.sceneOpened += SceneOpened;
         EditorApplication.quitting -= SaveHistoryToEditorPrefs;
         EditorApplication.quitting += SaveHistoryToEditorPrefs;
+
         wantsMouseEnterLeaveWindow = true;
         wantsMouseMove = true;
 
@@ -71,7 +79,6 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
 
     protected virtual void OnDisable()
     {
-
     }
 
     protected virtual void OnDestroy()
@@ -135,7 +142,8 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
             }
 
             // Draw insertion line at the end of pinned if dragging and mouse position is not above any pinned asset
-            if (!isAnyShortRectHover && i == pinned.Count && DragAndDrop.visualMode != DragAndDropVisualMode.None)
+            if (mouseOverWindow && !isAnyShortRectHover && // mouseOverWindow not working correctly with DragAndDrop
+                i == pinned.Count && DragAndDrop.visualMode != DragAndDropVisualMode.None)
             {
                 DrawDragInsertionLine(rect);
             }
@@ -239,6 +247,30 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
                 ev.Use();
             }
         }
+    }
+
+    private DragAndDropVisualMode OnDragDroppedSceneHandler(Object dropUpon, Vector3 worldPosition, Vector2 viewportPosition, Transform parentForDraggedObjects, bool perform)
+        => AddHistoryOnDragPerformed(perform);
+
+    private DragAndDropVisualMode OnDragDroppedHierarchyHandler(int dropTargetInstanceID, HierarchyDropFlags dropMode, Transform parentForDraggedObjects, bool perform)
+        => AddHistoryOnDragPerformed(perform);
+
+    private DragAndDropVisualMode OnDragDroppedInspectorHandler(UnityEngine.Object[] targets, bool perform)
+        => AddHistoryOnDragPerformed(perform);
+
+    private DragAndDropVisualMode AddHistoryOnDragPerformed(bool perform)
+    {
+        if (!perform) return DragAndDropVisualMode.None; // Next Handler in order will handle this drag (Unity default)
+        if (DragAndDrop.paths.Length == 0) return DragAndDropVisualMode.None; // Non-asset, e.g. making a prefab from scene object
+
+        foreach (var path in DragAndDrop.paths)
+        {
+            var asset = AssetDatabase.LoadMainAssetAtPath(path);
+            AddHistory(asset);
+            LimitAndOrderHistory();
+        }
+        Repaint();
+        return DragAndDropVisualMode.None;
     }
 
     private void OnDeleteKey()
