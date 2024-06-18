@@ -1,5 +1,7 @@
+using System;
 using UnityEditor;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 public class ComponentUtilities
 {
@@ -9,6 +11,8 @@ public class ComponentUtilities
     // Property copying
     private static SerializedObject savedSerializedObjectForProperty;
     private static string savedPropertyPath;
+    private static bool isSaved;
+    private static Type savedType;
 
     [InitializeOnLoadMethod]
     static void Initialize()
@@ -23,18 +27,35 @@ public class ComponentUtilities
         var modifiers = Event.current.modifiers;
         if (modifiers == EventModifiers.Control || modifiers == (EventModifiers.Control | EventModifiers.Alt))
         {
-            savedSerializedObject = new SerializedObject(property.serializedObject.targetObject);
+            var originalObject = property.serializedObject.targetObject;
+            savedSerializedObject = new SerializedObject(originalObject);
             // savedObject.targetObject is null if we delete component in the meantime. Hence we create a copy
-            savedTargetObject = Object.Instantiate(property.serializedObject.targetObject);
-            if (savedTargetObject is Component component) // Can be a scriptableObject
-                component.gameObject.hideFlags = HideFlags.HideAndDontSave;
 
-            Debug.Log("Component copied");
+            if (originalObject is not Component && originalObject is not GameObject) // Can be a scriptableObject
+            {
+                savedTargetObject = Object.Instantiate(property.serializedObject.targetObject);
+                savedType = originalObject.GetType();
+                isSaved = true;
+                Debug.Log("Component copied");
+            }
+            else if (originalObject is Component)
+            {
+                Unsupported.CopyComponentToPasteboard(originalObject as Component);
+                savedTargetObject = null;
+                isSaved = true;
+                savedType = originalObject.GetType();
+                Debug.Log("Component copied");
+            }
+            else
+            {
+                Debug.LogError("Cannot copy this object");
+            }
+
         }
         // Paste properties with same names
         if (modifiers == (EventModifiers.Shift | EventModifiers.Control))
         {
-            if (savedSerializedObject == null)
+            if (!isSaved)
             {
                 Debug.Log("Saved component is null");
                 return;
@@ -48,31 +69,43 @@ public class ComponentUtilities
                 Debug.Log("Saved component is null");
                 return;
             }
-            if (savedTargetObject == null)
+            if (!isSaved)
             {
                 Debug.Log("Saved component target object is null");
                 return;
             }
 
-            // Paste values if type is the same
-            if (savedTargetObject.GetType() == property.serializedObject.targetObject.GetType())
+            // Paste values if type is the same - Component
+            if (savedType == property.serializedObject.targetObject.GetType() && savedTargetObject == null)
             {
+                var tempGO = new GameObject();
+                Unsupported.PasteComponentFromPasteboard(tempGO);
+                var tempTargetObject = tempGO.GetComponent(savedType);
+                Undo.RecordObject(property.serializedObject.targetObject, "Paste component values");
+                EditorUtility.CopySerialized(tempTargetObject, property.serializedObject.targetObject);
+                Object.DestroyImmediate(tempGO);
+                Debug.Log("Component values pasted");
+            } // Paste values if type is the same - Something else (ScriptableObject)
+            else if (savedType == property.serializedObject.targetObject.GetType() && savedTargetObject != null)
+            {
+                var name = property.serializedObject.targetObject.name;
                 Undo.RecordObject(property.serializedObject.targetObject, "Paste component values");
                 EditorUtility.CopySerialized(savedTargetObject, property.serializedObject.targetObject);
+                if (property.serializedObject.targetObject is ScriptableObject so)
+                    so.name = name;
                 Debug.Log("Component values pasted");
             }
             // Create new component
             else
             {
                 GameObject g = ((Component)property.serializedObject.targetObject).gameObject;
-                Component c = Undo.AddComponent(g, savedTargetObject.GetType());
-                EditorUtility.CopySerialized(savedTargetObject, c);
-                Debug.Log("Component pasted as new");
+                if (Unsupported.PasteComponentFromPasteboard(g))
+                    Debug.Log("Component pasted as new");
             }
 
         }
         // Delete Component
-        if ((modifiers & EventModifiers.Alt) == EventModifiers.Alt)
+        if ((modifiers & EventModifiers.Alt) == EventModifiers.Alt && savedType == typeof(Component))
         {
             Undo.RegisterFullObjectHierarchyUndo(property.serializedObject.targetObject, "Delete component");
             int undoID = Undo.GetCurrentGroup();
