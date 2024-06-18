@@ -78,12 +78,7 @@ public class ComponentUtilities
             // Paste values if type is the same - Component
             if (savedType == property.serializedObject.targetObject.GetType() && savedTargetObject == null)
             {
-                var tempGO = new GameObject();
-                Unsupported.PasteComponentFromPasteboard(tempGO);
-                var tempTargetObject = tempGO.GetComponent(savedType);
-                Undo.RecordObject(property.serializedObject.targetObject, "Paste component values");
-                EditorUtility.CopySerialized(tempTargetObject, property.serializedObject.targetObject);
-                Object.DestroyImmediate(tempGO);
+                Unsupported.PasteComponentValuesFromPasteboard(property.serializedObject.targetObject as Component);
                 Debug.Log("Component values pasted");
             } // Paste values if type is the same - Something else (ScriptableObject)
             else if (savedType == property.serializedObject.targetObject.GetType() && savedTargetObject != null)
