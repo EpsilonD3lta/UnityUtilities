@@ -1,10 +1,11 @@
 ﻿using UnityEditor;
+using UnityEditor.ShortcutManagement;
 using UnityEngine;
 
 public static class InspectorExtensions
 {
     [MenuItem("CONTEXT/RectTransform/Anchors to Corners")]
-    static void AnchorsToCorners(MenuCommand command)
+    public static void AnchorsToCorners(MenuCommand command)
     {
         if (Selection.transforms == null || Selection.transforms.Length == 0)
             return;
@@ -33,7 +34,7 @@ public static class InspectorExtensions
     }
 
     [MenuItem("CONTEXT/RectTransform/Corners to Anchors")]
-    static void CornersToAnchors(MenuCommand command)
+    public static void CornersToAnchors(MenuCommand command)
     {
         if (Selection.transforms == null || Selection.transforms.Length == 0)
             return;
@@ -51,5 +52,11 @@ public static class InspectorExtensions
             t.offsetMin = t.offsetMax = new Vector2(0, 0);
         }
         Undo.CollapseUndoOperations(undoGroup);
+    }
+
+    [Shortcut("Anchors To Corners", KeyCode.T, ShortcutModifiers.Alt)]
+    public static void AnchorsToCornersGlobal()
+    {
+        AnchorsToCorners(null);
     }
 }

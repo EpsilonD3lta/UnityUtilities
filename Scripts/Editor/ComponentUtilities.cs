@@ -100,7 +100,8 @@ public class ComponentUtilities
 
         }
         // Delete Component
-        if ((modifiers & EventModifiers.Alt) == EventModifiers.Alt && savedType == typeof(Component))
+        if ((modifiers & EventModifiers.Alt) == EventModifiers.Alt &&
+            property.serializedObject.targetObject is Component)
         {
             Undo.RegisterFullObjectHierarchyUndo(property.serializedObject.targetObject, "Delete component");
             int undoID = Undo.GetCurrentGroup();
