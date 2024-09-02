@@ -236,6 +236,7 @@ public class FileUtilities
     [OnOpenAsset(0)]
     public static bool OnOpenWithModifiers(int instanceID, int line)
     {
+        if (Event.current == null) return false;
         if (Event.current.modifiers == EventModifiers.None) return false;
         if (Event.current.modifiers == EventModifiers.Alt)
         {
