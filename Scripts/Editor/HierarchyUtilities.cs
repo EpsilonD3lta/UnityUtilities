@@ -8,6 +8,7 @@ public class HierarchyUtilities
     [InitializeOnLoadMethod]
     private static void ObjectChangeEventsExample()
     {
+        ObjectChangeEvents.changesPublished -= ChangesPublished;
         ObjectChangeEvents.changesPublished += ChangesPublished;
     }
 
