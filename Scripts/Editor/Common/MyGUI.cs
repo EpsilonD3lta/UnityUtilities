@@ -228,31 +228,11 @@ public static class MyGUI
         }
         return (buttonResult.isHovered, buttonResult.isShortRectHovered);
 
-
         void LeftMouseUp(Object obj, bool isSelected, int i, ref int lastSelectedIndex)
         {
             lastSelectedIndex = i;
             var ev = Event.current;
-            if (ev.modifiers == EventModifiers.Control) // Ctrl select
-                if (!isSelected) Selection.objects = Selection.objects.Append(obj).ToArray();
-                else Selection.objects = Selection.objects.Where(x => x != obj).ToArray();
-            else if (ev.modifiers == EventModifiers.Shift) // Shift select
-            {
-                int firstSelected = shownItems.FindIndex(x => Selection.objects.Contains(x));
-                if (firstSelected != -1)
-                {
-                    int startIndex = Mathf.Min(firstSelected + 1, i);
-                    int count = Mathf.Abs(firstSelected - i);
-                    Selection.objects = Selection.objects.
-                        Concat(shownItems.GetRange(startIndex, count)).Distinct().ToArray();
-                }
-                else Selection.objects = Selection.objects.Append(obj).ToArray();
-            }
-            else
-            {
-                Selection.activeObject = obj; // Ordinary select
-                Selection.objects = new Object[] { obj };
-            }
+            HandleSelection(true);
             ev.Use();
         }
 
@@ -267,13 +247,12 @@ public static class MyGUI
         void RightClick(Object obj, int i, ref int lastSelectedIndex)
         {
             lastSelectedIndex = i;
-            Selection.activeObject = obj;
+            HandleSelection(false);
             ev.Use();
         }
 
         void ContextClick(Rect rect, Object obj)
         {
-            Selection.activeObject = obj;
             if (IsComponent(obj)) OpenObjectContextMenu(rect, obj);
             else if (IsAsset(obj)) EditorUtility.DisplayPopupMenu(rect, "Assets/", null);
             else if (IsNonAssetGameObject(obj))
@@ -304,6 +283,32 @@ public static class MyGUI
             if (Event.current.modifiers == EventModifiers.Alt)
                 Debug.Log($"{GlobalObjectId.GetGlobalObjectIdSlow(obj)} InstanceID: {obj.GetInstanceID()}");
             else pingButtonMiddleClick?.Invoke();
+        }
+
+        void HandleSelection(bool leftClick)
+        {
+            if (ev.modifiers == EventModifiers.Control) // Ctrl select
+            {
+                if (!isSelected) Selection.objects = Selection.objects.Append(obj).ToArray();
+                else if (leftClick) Selection.objects = Selection.objects.Where(x => x != obj).ToArray();
+            }
+            else if (ev.modifiers == EventModifiers.Shift) // Shift select
+            {
+                int firstSelected = shownItems.FindIndex(x => Selection.objects.Contains(x));
+                if (firstSelected != -1)
+                {
+                    int startIndex = Mathf.Min(firstSelected + 1, i);
+                    int count = Mathf.Abs(firstSelected - i);
+                    Selection.objects = Selection.objects.
+                        Concat(shownItems.GetRange(startIndex, count)).Distinct().ToArray();
+                }
+                else Selection.objects = Selection.objects.Append(obj).ToArray();
+            }
+            else if (leftClick || !isSelected)
+            {
+                Selection.activeObject = obj; // Ordinary select
+                Selection.objects = new Object[] { obj };
+            }
         }
     }
 }
