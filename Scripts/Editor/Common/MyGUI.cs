@@ -223,7 +223,8 @@ public static class MyGUI
             // Draw insertion line
             if (isPinned && DragAndDrop.visualMode != DragAndDropVisualMode.None)
             {
-                DrawDragInsertionLine(rect);
+                if (ev.modifiers != EventModifiers.Control) // Otherwise  we are trying to move asset to folder
+                    DrawDragInsertionLine(rect);
             }
         }
         return (buttonResult.isHovered, buttonResult.isShortRectHovered);

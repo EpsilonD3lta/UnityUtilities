@@ -188,6 +188,7 @@ public class EditorHelper
         var dragData = DragAndDrop.GetGenericData(nameof(MyEditorWindow));
         if (!(dragData is bool b && b))
             return DragAndDropVisualMode.None;
+        MoveAssets(dropUponPath, DragAndDrop.paths);
         var undoMethod = typeof(Undo).GetMethod("RegisterAssetsMoveUndo", BindingFlags.Static | BindingFlags.NonPublic);
         undoMethod.Invoke(null, new object[] { DragAndDrop.paths });
         foreach (var oldPath in DragAndDrop.paths)
@@ -198,6 +199,24 @@ public class EditorHelper
         }
         AssetDatabase.Refresh();
         return DragAndDropVisualMode.Move;
+    }
+
+    public static void MoveAssets(string newPath, params string[] oldPaths)
+    {
+        if (!AssetDatabase.IsValidFolder(newPath))
+        {
+            Debug.LogWarning($"Invalid destination folder: {newPath}");
+            return; 
+        }
+        var undoMethod = typeof(Undo).GetMethod("RegisterAssetsMoveUndo", BindingFlags.Static | BindingFlags.NonPublic);
+        undoMethod.Invoke(null, new object[] { oldPaths });
+        foreach (var oldPath in oldPaths)
+        {
+            var assetName = Path.GetFileName(oldPath);
+            var newAssetPath = newPath + "/" + assetName;
+            AssetDatabase.MoveAsset(oldPath, newAssetPath);
+        }
+        AssetDatabase.Refresh();
     }
 
     /// <summary>

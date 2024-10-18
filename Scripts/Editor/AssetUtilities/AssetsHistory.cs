@@ -145,7 +145,8 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
             if (mouseOverWindow && !isAnyShortRectHover && // mouseOverWindow not working correctly with DragAndDrop
                 i == pinned.Count && DragAndDrop.visualMode != DragAndDropVisualMode.None)
             {
-                DrawDragInsertionLine(rect);
+                if (ev.modifiers != EventModifiers.Control) // Otherwise we are trying to move asset to folder
+                    DrawDragInsertionLine(rect);
             }
 
             if (b.isShortRectHovered) isAnyShortRectHover = true;
@@ -217,7 +218,17 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
     private void DragPerformed(Object obj, int i, bool isPinned, ref bool shouldLimitAndOrderHistory)
     {
         var ev = Event.current;
-        if (isPinned)
+
+        if (ev.modifiers == EventModifiers.Control)
+        {
+            ev.Use();
+            DragAndDrop.AcceptDrag();
+
+            var destinationPath = AssetDatabase.GetAssetPath(obj);
+            if (!AssetDatabase.IsValidFolder(destinationPath)) return;
+            MoveAssets(destinationPath, DragAndDrop.paths);
+        }
+        else if (isPinned)
         {
             DragAndDrop.AcceptDrag();
             int k = 0; // Insert would revert order if we do not compensate
@@ -235,15 +246,21 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
             shouldLimitAndOrderHistory = true;
             ev.Use();
         }
-        // Prevent accidental drags
-        else if (ev.type == EventType.DragPerform && ev.button == 0)
+        else
         {
             var dragData = DragAndDrop.GetGenericData(GetInstanceID().ToString());
             bool preventDrop = dragData is bool b && b && DragAndDrop.objectReferences.Length == 1 &&
                 DragAndDrop.objectReferences[0] == obj; // Same object row
-            if (preventDrop)
+            if (preventDrop) // Prevent accidental drags on itself
             {
                 DragAndDrop.AcceptDrag();
+                ev.Use();
+            }
+            else
+            {
+                DragAndDrop.AcceptDrag();
+                DropObjectToWindow();
+                shouldLimitAndOrderHistory = true;
                 ev.Use();
             }
         }
