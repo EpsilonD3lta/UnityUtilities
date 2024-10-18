@@ -26,10 +26,12 @@ public class AppDataUtility : EditorWindow
         if (GUILayout.Button(EditorGUIUtility.IconContent("FolderOpened Icon"),
             GUILayout.MaxWidth(40), GUILayout.MaxHeight(17)))
         {
-            string assetPath = Application.persistentDataPath;
-            assetPath = "\"" + assetPath + "\"";
-            assetPath = assetPath.Replace('/', '\\');
-            ProcessStartInfo process = new ProcessStartInfo("explorer.exe", assetPath)
+            string appDataPath = Application.persistentDataPath;
+            appDataPath = appDataPath.Replace('/', '\\');
+            var storagePath = appDataPath + "\\" + "Storage";
+            if (Directory.Exists(storagePath)) appDataPath = storagePath;
+            appDataPath = "\"" + appDataPath + "\"";
+            ProcessStartInfo process = new ProcessStartInfo("explorer.exe", appDataPath)
             {
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
