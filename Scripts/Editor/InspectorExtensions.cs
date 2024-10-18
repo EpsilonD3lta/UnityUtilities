@@ -1,4 +1,6 @@
-﻿using UnityEditor;
+﻿using System;
+using System.IO;
+using UnityEditor;
 using UnityEditor.ShortcutManagement;
 using UnityEngine;
 
@@ -58,5 +60,33 @@ public static class InspectorExtensions
     public static void AnchorsToCornersGlobal()
     {
         AnchorsToCorners(null);
+    }
+
+    [Shortcut("MakeScreenshot", KeyCode.R, ShortcutModifiers.Alt, displayName = "Make ScreenShot")]
+    public static void Screenshot()
+    {
+        Screenshot(null);
+    }
+
+    [MenuItem("CONTEXT/Camera/Screenshot")]
+    public static void Screenshot(MenuCommand command)
+    {
+        if (!AssetDatabase.IsValidFolder("Assets/Screenshots"))
+        {
+            AssetDatabase.CreateFolder("Assets", "Screenshots");
+        }
+        var path = $"Assets/Screenshots/Screenshot_{DateTime.Now:yyyy-MM-dd-HH_mm_ss}.png";
+        ScreenCapture.CaptureScreenshot(path);
+        var timerStart = DateTime.Now;
+        EditorApplication.update += Refresh;
+
+        void Refresh()
+        {
+            if (timerStart.AddSeconds(0.5f) < DateTime.Now)
+            {
+                EditorApplication.update -= Refresh;
+                AssetDatabase.ImportAsset(path);
+            }
+        }
     }
 }
