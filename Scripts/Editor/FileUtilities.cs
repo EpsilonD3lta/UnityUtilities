@@ -298,7 +298,7 @@ public class FileUtilities
     {
         Object asset = EditorUtility.InstanceIDToObject(instanceID);
         string assetPath = AssetDatabase.GetAssetPath(asset);
-        if (Regex.IsMatch(assetPath, @".*\.png$|.*\.jpg$|.*\.jpeg$|.*\.bmp$", RegexOptions.IgnoreCase))
+        if (Regex.IsMatch(assetPath, @".*\.png$|.*\.jpg$|.*\.jpeg$|.*\.bmp$|.*\.psd$|.*\.psb$", RegexOptions.IgnoreCase))
         {
             OpenInGimp(assetPath);
             return true;
