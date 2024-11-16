@@ -28,6 +28,8 @@ public class RectToolRounding
             // MouseDrag triggers when RectTool is dragged, but not when anchors are dragged
             if ((anchorMin != r.anchorMin || anchorMax != r.anchorMax) && Event.current.type != EventType.MouseDrag) return;
             if (r.drivenByObject != null) return; // When driven by layout groups etc.
+            if (r.TryGetComponent(out Canvas canvas) && canvas.isRootCanvas && canvas.renderMode == RenderMode.WorldSpace)
+                return;
             //Debug.Log($"{r.sizeDelta}, {r.offsetMin}, {r.offsetMax}, {r.anchoredPosition}");
             r.sizeDelta = new Vector2(Round(r.sizeDelta.x), Round(r.sizeDelta.y));
 
