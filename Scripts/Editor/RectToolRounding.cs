@@ -30,6 +30,8 @@ public class RectToolRounding
             if (r.drivenByObject != null) return; // When driven by layout groups etc.
             if (r.TryGetComponent(out Canvas canvas) && canvas.isRootCanvas && canvas.renderMode == RenderMode.WorldSpace)
                 return;
+            if (!TryGetComponentInParent(r, out Canvas _)) return;
+
             //Debug.Log($"{r.sizeDelta}, {r.offsetMin}, {r.offsetMax}, {r.anchoredPosition}");
             r.sizeDelta = new Vector2(Round(r.sizeDelta.x), Round(r.sizeDelta.y));
 
@@ -55,6 +57,12 @@ public class RectToolRounding
     {
         //return Mathf.RoundToInt(x);
         return (int)System.Math.Round(x, 0, System.MidpointRounding.AwayFromZero);
+    }
+
+    public static bool TryGetComponentInParent<T>(Component component, out T c)
+    {
+        c = component.GetComponentInParent<T>();
+        return c != null;
     }
 
 }
