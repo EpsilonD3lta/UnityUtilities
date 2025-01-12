@@ -41,21 +41,32 @@ public class EditorUtilities
 
 public class EditorLoopUpdater
 {
-    private static bool isUpdating = false;
+    private static bool isLooping = false;
+    private static string PrefId => PlayerSettings.companyName + "." + PlayerSettings.productName + ".EpsilonDelta.EditorLoop";
 
-    [MenuItem("Editor/Loop _F6")]
-    public static void Loop()
+    [InitializeOnLoadMethod]
+    public static void LoadSetting()
     {
-        if (!isUpdating) EditorApplication.update += QueryUpdate;
-        Application.runInBackground = true;
-        isUpdating = true;
+        isLooping = EditorPrefs.GetBool(PrefId, false);
+        if (isLooping) EditorApplication.update += QueryUpdate;
+        Application.runInBackground = isLooping;
     }
 
-    [MenuItem("Editor/StopLoop _F7")]
-    public static void StopLoop()
+    [MenuItem("Editor/Loop _F7")]
+    public static void Loop()
     {
-        EditorApplication.update -= QueryUpdate;
-        isUpdating = false;
+        isLooping = !isLooping;
+        if (isLooping) EditorApplication.update += QueryUpdate;
+        else EditorApplication.update -= QueryUpdate;
+        Application.runInBackground = isLooping;
+        EditorPrefs.SetBool(PrefId, isLooping);
+    }
+
+    [MenuItem("Editor/Loop _F7", true)]
+    private static bool LoopValidate()
+    {
+        Menu.SetChecked("Editor/Loop", isLooping);
+        return true;
     }
 
     public static void QueryUpdate()
