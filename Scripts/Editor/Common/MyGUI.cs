@@ -29,6 +29,8 @@ public static class MyGUI
         }
     }
 
+    private static bool wasDoubleClick;
+
     public static (bool isHovered, bool isShortRectHovered, bool pingButtonClicked)
         DrawObjectRow(Rect rect, Object obj, bool isSelected, bool isPinned, string pingButtonContent = null)
     {
@@ -175,12 +177,14 @@ public static class MyGUI
         {
             if (ev.type == EventType.MouseUp && ev.button == 0 && ev.clickCount == 1) // Select on MouseUp
             {
-                LeftMouseUp(obj, isSelected, i, ref lastSelectedIndex);
+                if (!wasDoubleClick)
+                    LeftMouseUp(obj, isSelected, i, ref lastSelectedIndex);
+                wasDoubleClick = false;
             }
             else if (ev.type == EventType.MouseDown && ev.button == 0 && ev.clickCount == 2)
             {
                 DoubleClick(obj);
-
+                wasDoubleClick = true;
             }
             else if (ev.type == EventType.MouseDown && ev.button == 1)
             {
