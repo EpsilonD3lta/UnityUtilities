@@ -58,7 +58,7 @@ public class EditorLoopUpdater
         isLooping = !isLooping;
         if (isLooping) EditorApplication.update += QueryUpdate;
         else EditorApplication.update -= QueryUpdate;
-        Application.runInBackground = isLooping;
+        //Application.runInBackground = isLooping; // This is not necessary and changes ProjectSettings
         EditorPrefs.SetBool(PrefId, isLooping);
     }
 
