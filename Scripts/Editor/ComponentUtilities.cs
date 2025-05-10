@@ -25,6 +25,7 @@ public class ComponentUtilities
         AddCopyPastePropertyOption(menu, property);
         // Ctrl == copy, shift == paste, alt == copy, ctrl + alt == cut, ctrl + shift == adaptive paste
         var modifiers = Event.current.modifiers;
+        // Copy
         if (modifiers == EventModifiers.Control || modifiers == (EventModifiers.Control | EventModifiers.Alt))
         {
             var originalObject = property.serializedObject.targetObject;
@@ -52,8 +53,8 @@ public class ComponentUtilities
             }
 
         }
-        // Paste properties with same names
-        if (modifiers == (EventModifiers.Shift | EventModifiers.Control))
+        // Paste
+        if (modifiers == (EventModifiers.Shift | EventModifiers.Control)) // Adaptive Paste
         {
             if (!isSaved)
             {
@@ -62,7 +63,7 @@ public class ComponentUtilities
             }
             AdaptivePaste(property);
         }
-        else if (modifiers == EventModifiers.Shift)
+        else if (modifiers == EventModifiers.Shift) // Normal Paste
         {
             if (savedSerializedObject == null)
             {
@@ -100,6 +101,7 @@ public class ComponentUtilities
 
         }
         // Delete Component
+        // This has multi-edit support. Can be implemented in the same way to the other actions too, if needed
         if ((modifiers & EventModifiers.Alt) == EventModifiers.Alt &&
             property.serializedObject.targetObject is Component)
         {
@@ -141,6 +143,7 @@ public class ComponentUtilities
         Debug.Log("Component values adaptively pasted");
     }
 
+    // Copy/Paste of individual properties (through property context menu)
     private static void AddCopyPastePropertyOption(GenericMenu menu, SerializedProperty property)
     {
         var propertyPath = property.propertyPath;
