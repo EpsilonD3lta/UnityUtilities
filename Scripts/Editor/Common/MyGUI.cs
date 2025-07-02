@@ -3,27 +3,23 @@ using UnityEngine;
 using Object = UnityEngine.Object;
 using static EditorHelper;
 using System.Linq;
-using NUnit.Framework;
 using System.Collections.Generic;
 using System;
-using System.Runtime.CompilerServices;
 
 public static class MyGUI
 {
     public const int objectRowHeight = 16;
     public static class Styles
     {
-        public static GUIStyle insertion = "TV Insertion";
-        public static GUIStyle lineStyle = "TV Line";
-        public static GUIStyle selectionStyle = "TV Selection";
-        public static GUIStyle pingButtonStyle;
+        public static GUIStyle insertion = new("TV Insertion");
+        public static GUIStyle lineStyle = new("TV Line");
+        public static GUIStyle selectionStyle = new("TV Selection");
+        public static GUIStyle pingButtonStyle = new GUIStyle(GUI.skin.button);
 
         static Styles()
         {
-            lineStyle = new GUIStyle(lineStyle);
             lineStyle.alignment = TextAnchor.MiddleLeft;
             lineStyle.padding.right += objectRowHeight;
-            pingButtonStyle = new GUIStyle(GUI.skin.button);
             pingButtonStyle.padding = new RectOffset(2, 0, 0, 1);
             pingButtonStyle.alignment = TextAnchor.MiddleCenter;
         }

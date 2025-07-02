@@ -1,10 +1,7 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Diagnostics;
 using UnityEditor;
 using UnityEngine;
-using Object = UnityEngine.Object;
 using Debug = UnityEngine.Debug;
 
 public class EditorUtilities
@@ -26,7 +23,7 @@ public class EditorUtilities
     {
         var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         string VSCodePath = localAppData + "/Programs/Microsoft VS Code/Code.exe";
-        Debug.Log(VSCodePath + " \"" + localAppData + "/Unity/Editor.log\"");
+        Debug.Log(VSCodePath + " \"" + localAppData + "/Unity/Editor/Editor.log\"");
         ProcessStartInfo process = new ProcessStartInfo(
             VSCodePath, " \"" + localAppData + "/Unity/Editor/Editor.log\"")
         {
