@@ -35,6 +35,9 @@ public static class InspectorExtensions
         Undo.CollapseUndoOperations(undoGroup);
     }
 
+    [Shortcut("Anchors To Corners", KeyCode.T, ShortcutModifiers.Alt)]
+    public static void AnchorsToCornersGlobal() => AnchorsToCorners(null);
+
     [MenuItem("CONTEXT/RectTransform/Corners to Anchors")]
     public static void CornersToAnchors(MenuCommand command)
     {
@@ -56,17 +59,8 @@ public static class InspectorExtensions
         Undo.CollapseUndoOperations(undoGroup);
     }
 
-    [Shortcut("Anchors To Corners", KeyCode.T, ShortcutModifiers.Alt)]
-    public static void AnchorsToCornersGlobal()
-    {
-        AnchorsToCorners(null);
-    }
-
-    [Shortcut("MakeScreenshot", KeyCode.R, ShortcutModifiers.Alt, displayName = "Make ScreenShot")]
-    public static void Screenshot()
-    {
-        Screenshot(null);
-    }
+    [Shortcut("MakeScreenshot", KeyCode.R, ShortcutModifiers.Alt, displayName = "Make Screenshot")]
+    public static void Screenshot() => Screenshot(null);
 
     [MenuItem("CONTEXT/Camera/Screenshot")]
     public static void Screenshot(MenuCommand command)
@@ -88,5 +82,48 @@ public static class InspectorExtensions
                 AssetDatabase.ImportAsset(path);
             }
         }
+    }
+
+    [MenuItem("CONTEXT/Camera/ScreenshotTransparent")]
+    public static void ScreenshotTransparent(MenuCommand command)
+    {
+        var camera = command.context as Camera;
+        ScreenshotTransparent(camera, camera.pixelWidth, camera.pixelHeight);
+    }
+
+    [Shortcut("MakeIcon", KeyCode.R, ShortcutModifiers.Alt | ShortcutModifiers.Shift, displayName = "Make Icon")]
+    public static void MakeIcon() => ScreenshotTransparent(Camera.allCameras[0], 512, 512);
+
+    [MenuItem("CONTEXT/Camera/Screenshot Transparent 512x512")]
+    public static void ScreenshotTransparent512(MenuCommand command)
+        => ScreenshotTransparent((Camera)command.context, 512, 512);
+
+    /// <summary> Works when camera background color is set to transparent </summary>
+    public static void ScreenshotTransparent(Camera camera, int width, int height)
+    {
+        if (!AssetDatabase.IsValidFolder("Assets/Screenshots"))
+            AssetDatabase.CreateFolder("Assets", "Screenshots");
+        var path = $"Assets/Screenshots/Screenshot_{DateTime.Now:yyyy-MM-dd-HH_mm_ss}.png";
+
+        Texture2D tempTexture = new Texture2D(width, height, TextureFormat.ARGB32, false);
+        RenderTexture tempRenderTexture = RenderTexture.GetTemporary(tempTexture.width, tempTexture.height, 32);
+
+        RenderTexture originalCamRenderTexture = camera.targetTexture;
+        var originalActivaRenderTexture = RenderTexture.active;
+
+        camera.targetTexture = tempRenderTexture;
+        camera.Render();
+        camera.targetTexture = originalCamRenderTexture;
+
+        RenderTexture.active = tempRenderTexture;
+        tempTexture.ReadPixels(new Rect(0, 0, tempTexture.width, tempTexture.height), 0, 0); // Reads active RenderTexture
+        tempTexture.Apply();
+        RenderTexture.active = originalActivaRenderTexture;
+        RenderTexture.ReleaseTemporary(tempRenderTexture);
+
+        byte[] bytes = tempTexture.EncodeToPNG();
+        UnityEngine.Object.DestroyImmediate(tempTexture);
+        File.WriteAllBytes(path, bytes);
+        AssetDatabase.Refresh();
     }
 }
