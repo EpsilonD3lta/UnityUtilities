@@ -222,7 +222,7 @@ public static class PrefabUtilities
         foreach (var guid in guids)
         {
             var go = AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(guid));
-            foreach(var t in go.GetComponentsInChildren<Transform>(true))
+            foreach (var t in go.GetComponentsInChildren<Transform>(true))
             {
                 var g = t.gameObject;
                 if (PrefabUtility.IsAnyPrefabInstanceRoot(g))

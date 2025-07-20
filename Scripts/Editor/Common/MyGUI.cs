@@ -1,10 +1,10 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
-using Object = UnityEngine.Object;
 using static EditorHelper;
-using System.Linq;
-using System.Collections.Generic;
-using System;
+using Object = UnityEngine.Object;
 
 public static class MyGUI
 {

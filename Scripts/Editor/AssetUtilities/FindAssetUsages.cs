@@ -124,7 +124,6 @@ public class FindAssetUsages : MyEditorWindow
         return results;
     }
 
-
     // This is faster for multiple searches e.g. in FindUnusedAssets, because Async version only does 1 search per editor Frame
     public static List<Object> FindObjectUsageSync(Object obj, bool filter = false, bool sort = false)
     {
@@ -213,4 +212,3 @@ public class FindAssetUsages : MyEditorWindow
     }
 
 }
-

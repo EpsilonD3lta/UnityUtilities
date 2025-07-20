@@ -1,18 +1,17 @@
 using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEditor.Callbacks;
 using UnityEditorInternal;
 using UnityEngine;
-using Object = UnityEngine.Object;
 using Debug = UnityEngine.Debug;
-using System.Runtime.Serialization;
+using Object = UnityEngine.Object;
 
 // Menu item shortcuts: % == ctrl, # == shift, & == alt, _ == no modifier, LEFT, RIGHT, UP, DOWN, F1..F12, HOME, END, PGUP, PGDN
 public class FileUtilities

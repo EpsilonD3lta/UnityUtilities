@@ -4,9 +4,9 @@ using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
-using Object = UnityEngine.Object;
 using static EditorHelper;
 using static MyGUI;
+using Object = UnityEngine.Object;
 
 public class AssetDependencies : MyEditorWindow, IHasCustomMenu
 {

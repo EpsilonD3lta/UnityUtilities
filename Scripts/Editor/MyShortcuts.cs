@@ -1,7 +1,7 @@
-using UnityEditor.ShortcutManagement;
-using UnityEditor;
-using UnityEngine;
 using System.Reflection;
+using UnityEditor;
+using UnityEditor.ShortcutManagement;
+using UnityEngine;
 
 public class MyShortcuts
 {

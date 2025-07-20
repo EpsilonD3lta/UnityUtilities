@@ -1,15 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using Object = UnityEngine.Object;
 using static EditorHelper;
 using static MyGUI;
-using System.IO;
-using System.Reflection;
+using Object = UnityEngine.Object;
 
 public class AssetsHistory : MyEditorWindow, IHasCustomMenu
 {

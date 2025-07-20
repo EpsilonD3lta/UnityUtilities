@@ -206,7 +206,7 @@ public class EditorHelper
         if (!AssetDatabase.IsValidFolder(newPath))
         {
             Debug.LogWarning($"Invalid destination folder: {newPath}");
-            return; 
+            return;
         }
         var undoMethod = typeof(Undo).GetMethod("RegisterAssetsMoveUndo", BindingFlags.Static | BindingFlags.NonPublic);
         undoMethod.Invoke(null, new object[] { oldPaths });
