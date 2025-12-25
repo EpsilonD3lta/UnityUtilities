@@ -27,16 +27,14 @@ public class FileUtilities
         }
     }
 
-    //private static string VisualStudio2019Path = "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/devenv.exe";
-    private static string VisualStudioPath = "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/devenv.exe";
+    //private const string VisualStudio2019Path = "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/devenv.exe";
+    private const string VisualStudioPath = "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/devenv.exe";
 
     [MenuItem("Assets/File/Open as Textfile")]
     public static void OpenAsTextfile()
     {
         foreach (string guid in Selection.assetGUIDs)
-        {
             OpenAsTextfile(AssetDatabase.GUIDToAssetPath(guid));
-        }
     }
 
     public static void OpenAsTextfile(string path)
@@ -55,9 +53,7 @@ public class FileUtilities
     public static void OpenMetafile()
     {
         foreach (string guid in Selection.assetGUIDs)
-        {
             OpenMetafile(AssetDatabase.GUIDToAssetPath(guid));
-        }
     }
 
     public static void OpenMetafile(string path)
@@ -84,7 +80,7 @@ public class FileUtilities
         Debug.Log(JsonConvert.SerializeObject(instance));
     }
 
-    private static string GExtensionsPath = "C:/Program Files (x86)/GitExtensions/GitExtensions.exe";
+    private const string GExtensionsPath = "C:/Program Files (x86)/GitExtensions/GitExtensions.exe";
 
     [MenuItem("Assets/File/File History GE  %&h")]
     public static void FileHistoryGitExtensions()
@@ -130,9 +126,7 @@ public class FileUtilities
     public static void OpenInGimp()
     {
         foreach (string guid in Selection.assetGUIDs)
-        {
             OpenInGimp(AssetDatabase.GUIDToAssetPath(guid));
-        }
     }
 
     public static void OpenInGimp(string path)
@@ -147,16 +141,14 @@ public class FileUtilities
         Process.Start(process);
     }
 
-    private static string BlenderFolderPath = "C:/Program Files/Blender Foundation/";
+    private const string BlenderFolderPath = "C:/Program Files/Blender Foundation/";
     private static string BlenderPath = "";
 
     [MenuItem("Assets/File/Open FBX in Blender")]
     public static void OpenFBXInBlender()
     {
         foreach (string guid in Selection.assetGUIDs)
-        {
             OpenFBXInBlender(AssetDatabase.GUIDToAssetPath(guid));
-        }
     }
 
     // Inspired by https://blog.kikicode.com/2018/12/double-click-fbx-files-to-import-to.html
@@ -179,7 +171,7 @@ public class FileUtilities
         Process.Start(process);
     }
 
-    private static string AudacityPath = "C:/Program Files/Audacity/Audacity.exe";
+    private const string AudacityPath = "C:/Program Files/Audacity/Audacity.exe";
 
     [MenuItem("Assets/File/Open AudioFile in Audacity")]
     public static void OpenInAudacity()
@@ -202,7 +194,7 @@ public class FileUtilities
         Process.Start(process);
     }
 
-    private static string CygwinPath = "C:/cygwin64/bin/mintty.exe";
+    private const string CygwinPath = "C:/cygwin64/bin/mintty.exe";
     [MenuItem("Assets/File/Open Cygwin here")]
     public static void OpenCygwinHere()
     {
