@@ -124,8 +124,7 @@ public class FileUtilities
         Process.Start(process);
     }
 
-    private static string GIMPBinFolderPath = "C:/Program Files/GIMP 2/bin/";
-    private static string GIMPPath = "";
+    private const string GIMPPath = "C:/Program Files/GIMP 3/bin/gimp.exe";
 
     [MenuItem("Assets/File/Open In GIMP")]
     public static void OpenInGimp()
@@ -138,11 +137,6 @@ public class FileUtilities
 
     public static void OpenInGimp(string path)
     {
-        if (string.IsNullOrEmpty(GIMPPath))
-        {
-            GIMPPath = Directory.GetFiles(GIMPBinFolderPath, "*.exe").FirstOrDefault(x => Regex.IsMatch(x, @"gimp-[0-9]+"));
-            if (string.IsNullOrEmpty(GIMPPath)) return;
-        }
         ProcessStartInfo process = new ProcessStartInfo(GIMPPath, "\"" + path + "\"")
         {
             RedirectStandardOutput = true,
