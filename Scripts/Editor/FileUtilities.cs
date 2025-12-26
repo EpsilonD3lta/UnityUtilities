@@ -82,6 +82,23 @@ public class FileUtilities
 
     private const string GExtensionsPath = "C:/Program Files (x86)/GitExtensions/GitExtensions.exe";
 
+    [MenuItem("Assets/File/Open Repository in GE #&o", priority = 170)]
+    public static void OpenRepositoryInGitExtensions()
+    {
+        if (Selection.assetGUIDs.Length == 0) return;
+        var guid = Selection.assetGUIDs[0];
+        string path = AssetDatabase.GUIDToAssetPath(guid);
+        Debug.Log(path);
+        ProcessStartInfo process = new ProcessStartInfo(GExtensionsPath, " openrepo \"" + path + "\"")
+        {
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true,
+            UseShellExecute = false
+        };
+        Process.Start(process);
+    }
+
     [MenuItem("Assets/File/File History GE  %&h", priority = 171)]
     public static void FileHistoryGitExtensions()
     {
