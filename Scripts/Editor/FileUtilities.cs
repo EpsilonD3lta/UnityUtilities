@@ -16,7 +16,7 @@ using Object = UnityEngine.Object;
 // Menu item shortcuts: % == ctrl, # == shift, & == alt, _ == no modifier, LEFT, RIGHT, UP, DOWN, F1..F12, HOME, END, PGUP, PGDN
 public class FileUtilities
 {
-    [MenuItem("Assets/File/Copy GUID %#c")]
+    [MenuItem("Assets/File/Copy GUID %#c", priority = 70)]
     public static void CopyGuid()
     {
         if (Selection.assetGUIDs.Length > 0)
@@ -30,7 +30,7 @@ public class FileUtilities
     //private const string VisualStudio2019Path = "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/devenv.exe";
     private const string VisualStudioPath = "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/devenv.exe";
 
-    [MenuItem("Assets/File/Open as Textfile")]
+    [MenuItem("Assets/File/Open as Textfile", priority = 71)]
     public static void OpenAsTextfile()
     {
         foreach (string guid in Selection.assetGUIDs)
@@ -49,7 +49,7 @@ public class FileUtilities
         Process.Start(process);
     }
 
-    [MenuItem("Assets/File/Open Metafile")]
+    [MenuItem("Assets/File/Open Metafile", priority = 72)]
     public static void OpenMetafile()
     {
         foreach (string guid in Selection.assetGUIDs)
@@ -68,7 +68,7 @@ public class FileUtilities
         Process.Start(process);
     }
 
-    [MenuItem("Assets/File/Serialize Class")]
+    [MenuItem("Assets/File/Serialize Class", priority = 120)]
     public static void SerializeClass()
     {
         if (Selection.assetGUIDs.Length == 0) return;
@@ -82,7 +82,7 @@ public class FileUtilities
 
     private const string GExtensionsPath = "C:/Program Files (x86)/GitExtensions/GitExtensions.exe";
 
-    [MenuItem("Assets/File/File History GE  %&h")]
+    [MenuItem("Assets/File/File History GE  %&h", priority = 171)]
     public static void FileHistoryGitExtensions()
     {
         foreach (string guid in Selection.assetGUIDs)
@@ -95,7 +95,7 @@ public class FileUtilities
         }
     }
 
-    [MenuItem("Assets/File/Meta File History GE  #&h")]
+    [MenuItem("Assets/File/Meta File History GE  #&h", priority = 172)]
     public static void MetaFileHistoryGitExtensions()
     {
         foreach (string guid in Selection.assetGUIDs)
@@ -122,7 +122,7 @@ public class FileUtilities
 
     private const string GIMPPath = "C:/Program Files/GIMP 3/bin/gimp.exe";
 
-    [MenuItem("Assets/File/Open In GIMP")]
+    [MenuItem("Assets/File/Open In GIMP", priority = 220)]
     public static void OpenInGimp()
     {
         foreach (string guid in Selection.assetGUIDs)
@@ -144,7 +144,7 @@ public class FileUtilities
     private const string BlenderFolderPath = "C:/Program Files/Blender Foundation/";
     private static string BlenderPath = "";
 
-    [MenuItem("Assets/File/Open FBX in Blender")]
+    [MenuItem("Assets/File/Open FBX in Blender", priority = 221)]
     public static void OpenFBXInBlender()
     {
         foreach (string guid in Selection.assetGUIDs)
@@ -173,7 +173,7 @@ public class FileUtilities
 
     private const string AudacityPath = "C:/Program Files/Audacity/Audacity.exe";
 
-    [MenuItem("Assets/File/Open AudioFile in Audacity")]
+    [MenuItem("Assets/File/Open AudioFile in Audacity", priority = 222)]
     public static void OpenInAudacity()
     {
         foreach (string guid in Selection.assetGUIDs)
@@ -195,7 +195,7 @@ public class FileUtilities
     }
 
     private const string CygwinPath = "C:/cygwin64/bin/mintty.exe";
-    [MenuItem("Assets/File/Open Cygwin here")]
+    [MenuItem("Assets/File/Open Cygwin here", priority = 250)]
     public static void OpenCygwinHere()
     {
         foreach (string guid in Selection.assetGUIDs)
