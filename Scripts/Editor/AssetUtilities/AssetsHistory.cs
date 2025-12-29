@@ -141,7 +141,7 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
             }
 
             // Draw insertion line at the end of pinned if dragging and mouse position is not above any pinned asset
-            if (mouseOverWindow && !isAnyShortRectHover && // mouseOverWindow not working correctly with DragAndDrop
+            if (mouseOverWindow == this && !isAnyShortRectHover &&
                 i == pinned.Count && DragAndDrop.visualMode != DragAndDropVisualMode.None)
             {
                 if (ev.modifiers != EventModifiers.Control) // Otherwise we are trying to move asset to folder
