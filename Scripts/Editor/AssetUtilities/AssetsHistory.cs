@@ -75,10 +75,13 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
         wantsMouseEnterLeaveWindow = true; // Probably unnecessary
         wantsMouseMove = true;
 
+        EditorApplication.update -= EditorUpdate;
+        EditorApplication.update += EditorUpdate;
+
         LimitAndOrderHistory();
     }
 
-    protected virtual void Update()
+    protected virtual void EditorUpdate()
     {
         if (DragAndDrop.paths.Length != draggedObjectsCount)
         {
@@ -88,6 +91,7 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
                 AddHistory(asset);
                 LimitAndOrderHistory();
             }
+            // This will not cause repaint when window is not visible
             Repaint(); // Also repaint if drag is ending, because dragged item has greyed background
         }
     }

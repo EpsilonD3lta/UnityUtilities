@@ -117,6 +117,9 @@ public class HierarchyHistory : AssetsHistory
         wantsMouseEnterLeaveWindow = true;
         wantsMouseMove = true;
 
+        EditorApplication.update -= EditorUpdate;
+        EditorApplication.update += EditorUpdate;
+
         var prefabStage = PrefabStageUtility.GetCurrentPrefabStage();
         if (prefabStage) LoadPrefabHistory(prefabStage);
         else LoadOpenScenesHistory();
@@ -124,7 +127,7 @@ public class HierarchyHistory : AssetsHistory
         LimitAndOrderHistory();
     }
 
-    protected override void Update()
+    protected override void EditorUpdate()
     {
         if (DragAndDrop.objectReferences.Length != draggedObjectsCount)
         {

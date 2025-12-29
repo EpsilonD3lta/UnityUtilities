@@ -13,7 +13,7 @@ public class HierarchyHistorySimple : AssetsHistory
 
     protected override void Awake() { }
 
-    protected override void Update()
+    protected override void EditorUpdate()
     {
         if (DragAndDrop.objectReferences.Length != draggedObjectsCount)
         {
@@ -42,6 +42,9 @@ public class HierarchyHistorySimple : AssetsHistory
         //DragAndDrop.AddDropHandler(OnDragDroppedInspectorHandler);
         wantsMouseEnterLeaveWindow = true;
         wantsMouseMove = true;
+
+        EditorApplication.update -= EditorUpdate;
+        EditorApplication.update += EditorUpdate;
 
         LimitAndOrderHistory();
     }
