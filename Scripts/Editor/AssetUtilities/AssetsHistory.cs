@@ -48,12 +48,12 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
 
     }
 
-    protected virtual void Awake()
+    protected virtual void Awake() // Not called on recompile. Called on project startup
     {
         LoadHistoryFromEditorPrefs();
     }
 
-    protected virtual void OnEnable()
+    protected virtual void OnEnable() // Called on recompile, on project startup
     {
         // This is received even if invisible
         Selection.selectionChanged -= SelectionChanged;
