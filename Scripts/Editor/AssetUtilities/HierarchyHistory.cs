@@ -93,6 +93,12 @@ public class HierarchyHistory : AssetsHistory
         // This is received even if invisible
         Selection.selectionChanged -= SelectionChanged;
         Selection.selectionChanged += SelectionChanged;
+        DragAndDrop.RemoveDropHandler(OnDragDroppedSceneHandler);
+        DragAndDrop.AddDropHandler(OnDragDroppedSceneHandler);
+        DragAndDrop.RemoveDropHandler(OnDragDroppedHierarchyHandler);
+        DragAndDrop.AddDropHandler(OnDragDroppedHierarchyHandler);
+        DragAndDrop.RemoveDropHandler(OnDragDroppedInspectorHandler);
+        DragAndDrop.AddDropHandler(OnDragDroppedInspectorHandler);
         EditorApplication.hierarchyChanged -= HierarchyChanged;
         EditorApplication.hierarchyChanged += HierarchyChanged;
         PrefabStage.prefabStageOpened -= PrefabStageOpened;
