@@ -13,17 +13,33 @@ public class HierarchyHistorySimple : AssetsHistory
 
     protected override void Awake() { }
 
+    protected override void Update()
+    {
+        if (DragAndDrop.objectReferences.Length != draggedObjectsCount)
+        {
+            draggedObjectsCount = DragAndDrop.objectReferences.Length;
+            foreach (var obj in DragAndDrop.objectReferences)
+            {
+                if (!EditorHelper.IsNonAssetGameObject(obj)) continue;
+                AddHistory(obj);
+                LimitAndOrderHistory();
+            }
+            Repaint();
+        }
+    }
+
     protected override void OnEnable()
     {
         // This is received even if invisible
         Selection.selectionChanged -= SelectionChanged;
         Selection.selectionChanged += SelectionChanged;
-        DragAndDrop.RemoveDropHandler(OnDragDroppedSceneHandler);
-        DragAndDrop.AddDropHandler(OnDragDroppedSceneHandler);
-        DragAndDrop.RemoveDropHandler(OnDragDroppedHierarchyHandler);
-        DragAndDrop.AddDropHandler(OnDragDroppedHierarchyHandler);
-        DragAndDrop.RemoveDropHandler(OnDragDroppedInspectorHandler);
-        DragAndDrop.AddDropHandler(OnDragDroppedInspectorHandler);
+        // DragAndDrop is now better handled in Update method
+        //DragAndDrop.RemoveDropHandler(OnDragDroppedSceneHandler);
+        //DragAndDrop.AddDropHandler(OnDragDroppedSceneHandler);
+        //DragAndDrop.RemoveDropHandler(OnDragDroppedHierarchyHandler);
+        //DragAndDrop.AddDropHandler(OnDragDroppedHierarchyHandler);
+        //DragAndDrop.RemoveDropHandler(OnDragDroppedInspectorHandler);
+        //DragAndDrop.AddDropHandler(OnDragDroppedInspectorHandler);
         wantsMouseEnterLeaveWindow = true;
         wantsMouseMove = true;
 

@@ -93,12 +93,13 @@ public class HierarchyHistory : AssetsHistory
         // This is received even if invisible
         Selection.selectionChanged -= SelectionChanged;
         Selection.selectionChanged += SelectionChanged;
-        DragAndDrop.RemoveDropHandler(OnDragDroppedSceneHandler);
-        DragAndDrop.AddDropHandler(OnDragDroppedSceneHandler);
-        DragAndDrop.RemoveDropHandler(OnDragDroppedHierarchyHandler);
-        DragAndDrop.AddDropHandler(OnDragDroppedHierarchyHandler);
-        DragAndDrop.RemoveDropHandler(OnDragDroppedInspectorHandler);
-        DragAndDrop.AddDropHandler(OnDragDroppedInspectorHandler);
+        // DragAndDrop is now better handled in Update method
+        //DragAndDrop.RemoveDropHandler(OnDragDroppedSceneHandler);
+        //DragAndDrop.AddDropHandler(OnDragDroppedSceneHandler);
+        //DragAndDrop.RemoveDropHandler(OnDragDroppedHierarchyHandler);
+        //DragAndDrop.AddDropHandler(OnDragDroppedHierarchyHandler);
+        //DragAndDrop.RemoveDropHandler(OnDragDroppedInspectorHandler);
+        //DragAndDrop.AddDropHandler(OnDragDroppedInspectorHandler);
         EditorApplication.hierarchyChanged -= HierarchyChanged;
         EditorApplication.hierarchyChanged += HierarchyChanged;
         PrefabStage.prefabStageOpened -= PrefabStageOpened;
@@ -122,6 +123,22 @@ public class HierarchyHistory : AssetsHistory
 
         LimitAndOrderHistory();
     }
+
+    protected override void Update()
+    {
+        if (DragAndDrop.objectReferences.Length != draggedObjectsCount)
+        {
+            draggedObjectsCount = DragAndDrop.objectReferences.Length;
+            foreach (var obj in DragAndDrop.objectReferences)
+            {
+                if (!EditorHelper.IsNonAssetGameObject(obj)) continue;
+                AddHistory(obj);
+                LimitAndOrderHistory();
+            }
+            Repaint();
+        }
+    }
+
     protected override void OnDisable()
     {
         OnBeforeSerialize();

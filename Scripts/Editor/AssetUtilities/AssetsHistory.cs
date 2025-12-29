@@ -22,6 +22,7 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
     protected List<Object> pinned = new List<Object>();
     private int limit = 10;
     private int lastSelectedIndex = -1;
+    protected int draggedObjectsCount;
 
     [MenuItem("Window/Assets History")]
     private static void CreateWindow()
@@ -57,12 +58,13 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
         // This is received even if invisible
         Selection.selectionChanged -= SelectionChanged;
         Selection.selectionChanged += SelectionChanged;
-        DragAndDrop.RemoveDropHandler(OnDragDroppedSceneHandler);
-        DragAndDrop.AddDropHandler(OnDragDroppedSceneHandler);
-        DragAndDrop.RemoveDropHandler(OnDragDroppedHierarchyHandler);
-        DragAndDrop.AddDropHandler(OnDragDroppedHierarchyHandler);
-        DragAndDrop.RemoveDropHandler(OnDragDroppedInspectorHandler);
-        DragAndDrop.AddDropHandler(OnDragDroppedInspectorHandler);
+        // DragAndDrop is now better handled in Update method
+        //DragAndDrop.RemoveDropHandler(OnDragDroppedSceneHandler);
+        //DragAndDrop.AddDropHandler(OnDragDroppedSceneHandler);
+        //DragAndDrop.RemoveDropHandler(OnDragDroppedHierarchyHandler);
+        //DragAndDrop.AddDropHandler(OnDragDroppedHierarchyHandler);
+        //DragAndDrop.RemoveDropHandler(OnDragDroppedInspectorHandler);
+        //DragAndDrop.AddDropHandler(OnDragDroppedInspectorHandler);
         AssetImportHistory.assetImported -= AssetImported;
         AssetImportHistory.assetImported += AssetImported;
         EditorSceneManager.sceneOpened -= SceneOpened;
@@ -70,10 +72,24 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
         EditorApplication.quitting -= SaveHistoryToEditorPrefs;
         EditorApplication.quitting += SaveHistoryToEditorPrefs;
 
-        wantsMouseEnterLeaveWindow = true;
+        wantsMouseEnterLeaveWindow = true; // Probably unnecessary
         wantsMouseMove = true;
 
         LimitAndOrderHistory();
+    }
+
+    protected virtual void Update()
+    {
+        if (DragAndDrop.paths.Length != draggedObjectsCount)
+        {
+            foreach (var path in DragAndDrop.paths)
+            {
+                var asset = AssetDatabase.LoadMainAssetAtPath(path);
+                AddHistory(asset);
+                LimitAndOrderHistory();
+            }
+            Repaint(); // Also repaint if drag is ending, because dragged item has greyed background
+        }
     }
 
     protected virtual void OnDisable()
@@ -265,29 +281,29 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
         }
     }
 
-    private DragAndDropVisualMode OnDragDroppedSceneHandler(Object dropUpon, Vector3 worldPosition, Vector2 viewportPosition, Transform parentForDraggedObjects, bool perform)
-        => AddHistoryOnDragPerformed(perform);
+    //protected DragAndDropVisualMode OnDragDroppedSceneHandler(Object dropUpon, Vector3 worldPosition, Vector2 viewportPosition, Transform parentForDraggedObjects, bool perform)
+    //    => AddHistoryOnDragPerformed(perform);
 
-    private DragAndDropVisualMode OnDragDroppedHierarchyHandler(int dropTargetInstanceID, HierarchyDropFlags dropMode, Transform parentForDraggedObjects, bool perform)
-        => AddHistoryOnDragPerformed(perform);
+    //protected DragAndDropVisualMode OnDragDroppedHierarchyHandler(int dropTargetInstanceID, HierarchyDropFlags dropMode, Transform parentForDraggedObjects, bool perform)
+    //    => AddHistoryOnDragPerformed(perform);
 
-    private DragAndDropVisualMode OnDragDroppedInspectorHandler(UnityEngine.Object[] targets, bool perform)
-        => AddHistoryOnDragPerformed(perform);
+    //protected DragAndDropVisualMode OnDragDroppedInspectorHandler(UnityEngine.Object[] targets, bool perform)
+    //    => AddHistoryOnDragPerformed(perform);
 
-    private DragAndDropVisualMode AddHistoryOnDragPerformed(bool perform)
-    {
-        if (!perform) return DragAndDropVisualMode.None; // Next Handler in order will handle this drag (Unity default)
-        if (DragAndDrop.paths.Length == 0) return DragAndDropVisualMode.None; // Non-asset, e.g. making a prefab from scene object
+    //private DragAndDropVisualMode AddHistoryOnDragPerformed(bool perform)
+    //{
+    //    if (!perform) return DragAndDropVisualMode.None; // Next Handler in order will handle this drag (Unity default)
+    //    if (DragAndDrop.paths.Length == 0) return DragAndDropVisualMode.None; // Non-asset, e.g. making a prefab from scene object
 
-        foreach (var path in DragAndDrop.paths)
-        {
-            var asset = AssetDatabase.LoadMainAssetAtPath(path);
-            AddHistory(asset);
-            LimitAndOrderHistory();
-        }
-        Repaint();
-        return DragAndDropVisualMode.None;
-    }
+    //    foreach (var path in DragAndDrop.paths)
+    //    {
+    //        var asset = AssetDatabase.LoadMainAssetAtPath(path);
+    //        AddHistory(asset);
+    //        LimitAndOrderHistory();
+    //    }
+    //    Repaint();
+    //    return DragAndDropVisualMode.None;
+    //}
 
     private void OnDeleteKey()
     {
