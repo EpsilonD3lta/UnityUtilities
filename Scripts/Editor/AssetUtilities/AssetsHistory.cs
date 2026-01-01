@@ -85,6 +85,7 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
     {
         if (DragAndDrop.paths.Length != draggedObjectsCount)
         {
+            draggedObjectsCount = DragAndDrop.objectReferences.Length;
             foreach (var path in DragAndDrop.paths)
             {
                 var asset = AssetDatabase.LoadMainAssetAtPath(path);
