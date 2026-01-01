@@ -88,7 +88,13 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
             draggedObjectsCount = DragAndDrop.objectReferences.Length;
             foreach (var path in DragAndDrop.paths)
             {
+                // DragAndDrop contains also files dragged from file explorer and hovered over Unity Project.
+                // Such path is absolute and we can skip it because there is no asset to load.
+                // Files dragged from file explorer from withing project folder, will have project relative path.
+                if (!path.StartsWith("Assets") && !path.StartsWith("Packages")) continue;
+
                 var asset = AssetDatabase.LoadMainAssetAtPath(path);
+                if (asset == null) continue; // E.g. dragged .meta file will be null
                 AddHistory(asset);
                 LimitAndOrderHistory();
             }
