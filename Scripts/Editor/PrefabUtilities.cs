@@ -40,7 +40,7 @@ public static class PrefabUtilities
         return valid;
     }
 
-    [MenuItem("Assets/Prefab/PrefaPropagate Name/Preserve numbering", false)]
+    [MenuItem("Assets/Prefab/Propagate Name/Preserve numbering", false)]
     private static void PropagateNamePreserveNumbering()
     {
         PropagateName(true);
@@ -84,7 +84,7 @@ public static class PrefabUtilities
 
             // Check all scenes
 
-            // Get all existing scenes in folder Assets/Scenes
+            // Get all existing scenes in Assets folder
             string[] guids = AssetDatabase.FindAssets("t:scene", new[] { "Assets" });
             if (guids?.Length == 0) return;
             List<string> scenePaths = guids.Select(s => AssetDatabase.GUIDToAssetPath(s))
