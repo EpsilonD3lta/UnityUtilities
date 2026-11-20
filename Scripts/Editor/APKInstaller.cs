@@ -58,7 +58,11 @@ namespace Tools
 
         public static void Run()
         {
+#if (UNITY_6000_0_OR_NEWER)
+            string appIdentifier = PlayerSettings.GetApplicationIdentifier(UnityEditor.Build.NamedBuildTarget.Android);
+#else
             string appIdentifier = PlayerSettings.GetApplicationIdentifier(BuildTargetGroup.Android);
+#endif
             //This is the default Unity android launcher, however in my experience, it does not work properly. I use monkey launcher instead.
             //string mainActivity = "com.unity3d.player.UnityPlayerActivity";
             //string adbCommand = "shell am start -a android.intent.action.MAIN -n " + appIdentifier + "/" + mainActivity;
