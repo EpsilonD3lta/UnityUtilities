@@ -1,14 +1,20 @@
 ﻿using System.Diagnostics;
 using UnityEditor;
+#if UNITY_2019_4_OR_NEWER && UNITY_ANDROID
+using UnityEditor.Android;
+#endif
 
-namespace Tools
+namespace EpsilonDelta
 {
+#if UNITY_6000_7_OR_NEWER
+    [Unity.Scripting.LifecycleManagement.NoAutoStaticsCleanup]
+#endif
     public static class APKInstaller
     {
         private static string adbPath = EditorPrefs.GetString("AndroidSdkRoot") + "/platform-tools/adb";
         //This tool can be used as an alternative way to analyze apk file.
-        //private static string aaptPath = EditorPrefs.GetString("AndroidSdkRoot") + "/build-tools/*/aapt";
-        private static string apkAnalyzerPath = EditorPrefs.GetString("AndroidSdkRoot") + "/cmdline-tools/latest/bin/apkanalyzer.bat";
+        //private static readonly string aaptPath = EditorPrefs.GetString("AndroidSdkRoot") + "/build-tools/*/aapt";
+        private static readonly string apkAnalyzerPath = EditorPrefs.GetString("AndroidSdkRoot") + "/cmdline-tools/latest/bin/apkanalyzer.bat";
 
         [MenuItem("File/Install APK", priority = 211)]
         public static void InstallAPK()
@@ -30,6 +36,15 @@ namespace Tools
 
         public static void Install(string apkPath, bool run = false)
         {
+            // Newly exposed API, only available if Android Module is installed.
+            // Points to the SDK in Unity Editor folders. Unity usually uses these SDKs.
+            // EditorPrefs.GetString("AndroidSkdRoot") usually points to the same SDKs in newer versions of Unity,
+            // in older versions of Unity it usually points to Android studio SDK in Users folder,
+            // but you can set your custom SDK in Preferences and EditorPrefs will point there (might be empty).
+#if UNITY_2019_4_OR_NEWER && UNITY_ANDROID
+            if (string.IsNullOrEmpty(EditorPrefs.GetString("AndroidSdkRoot")))
+                adbPath = AndroidExternalToolsSettings.sdkRootPath + "/platform-tools/adb";
+#endif
             ProcessStartInfo process = new ProcessStartInfo(adbPath, "install -r \"" + apkPath + "\"")
             {
                 RedirectStandardOutput = true,
@@ -41,7 +56,9 @@ namespace Tools
             EditorUtility.DisplayProgressBar("Installing APK", "Installing...", 0.5f);
             installProcess.WaitForExit();
 
-            string result = "Result: " + installProcess.StandardOutput.ReadLine() + ": " + installProcess.StandardOutput.ReadToEnd();
+            string result = "Result: " + installProcess.StandardOutput.ReadLine();
+            string details = installProcess.StandardOutput.ReadToEnd();
+            if (!string.IsNullOrEmpty(details)) result += ": " + details;
             result += installProcess.StandardError.ReadToEnd();
 
             if (installProcess.ExitCode != 0)
@@ -76,7 +93,9 @@ namespace Tools
                 UseShellExecute = false
             };
             var runProcess = Process.Start(process);
-            string result = "Running app " + appIdentifier + ": " + runProcess.StandardOutput.ReadLine() + ": " + runProcess.StandardOutput.ReadToEnd();
+            string result = "Running app " + appIdentifier + ": " + runProcess.StandardOutput.ReadLine();
+            string details = runProcess.StandardOutput.ReadToEnd();
+            if (!string.IsNullOrEmpty(details)) result += ": " + details;
             result += runProcess.StandardError.ReadToEnd();
 
             if (runProcess.ExitCode != 0)
@@ -115,7 +134,9 @@ namespace Tools
                 UseShellExecute = false
             };
             var runProcess = Process.Start(process);
-            string result = "Running app (monkey) " + appIdentifier + ": " + runProcess.StandardOutput.ReadLine() + ": " + runProcess.StandardOutput.ReadToEnd();
+            string result = "Running app (monkey) " + appIdentifier + ": " + runProcess.StandardOutput.ReadLine();
+            string details = runProcess.StandardOutput.ReadToEnd();
+            if (!string.IsNullOrEmpty(details)) result += ": " + details;
             result += runProcess.StandardError.ReadToEnd();
 
             if (runProcess.ExitCode != 0)
