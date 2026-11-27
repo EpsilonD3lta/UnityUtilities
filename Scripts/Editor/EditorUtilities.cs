@@ -33,8 +33,30 @@ public class EditorUtilities
         };
         Process.Start(process);
     }
+
+    [MenuItem("Editor/Open Local Editor Log")]
+    public static void OpenLocalEditorLog()
+    {
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var projectPath = System.IO.Directory.GetParent(Application.dataPath).FullName;
+        var localEditorLogPath = projectPath + "/Logs/Editor.log";
+        string VSCodePath = localAppData + "/Programs/Microsoft VS Code/Code.exe";
+        UnityEngine.Debug.Log(VSCodePath + " \"" + localEditorLogPath + "\"");
+        ProcessStartInfo process = new ProcessStartInfo(
+            VSCodePath, " \"" + localEditorLogPath + "\"")
+        {
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true,
+            UseShellExecute = false
+        };
+        Process.Start(process);
+    }
 }
 
+#if UNITY_6000_7_OR_NEWER
+[Unity.Scripting.LifecycleManagement.NoAutoStaticsCleanup]
+#endif
 public class EditorLoopUpdater
 {
     private static bool isLooping = false;
