@@ -3,58 +3,72 @@ using System.Reflection;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+
 // Creator and Copyright: https://github.com/liortal53/MissingReferencesUnity/blob/master/
 // License: Apache License version 2.0: https://github.com/liortal53/MissingReferencesUnity/blob/master/LICENSE
-/// <summary>
-/// A helper editor script for finding missing references to objects.
-/// </summary>
+
+/// <summary> A helper editor script for finding missing references to objects </summary>
 public class FindMissingReferences
 {
-    private const string MENU_ROOT = "Tools/Find Missing References/";
+    private const string MenuRoot = "Tools/Find Missing References/";
 
-    /// <summary>
-    /// Finds all missing references to objects in the currently loaded scene.
-    /// </summary>
-    [MenuItem(MENU_ROOT + "Search in scene", false)]
+    /// <summary> Finds all missing references to objects in the currently loaded scene </summary>
+    [MenuItem(MenuRoot + "Search in scene", false, 0)]
     public static void FindMissingRefsInCurrentScene()
     {
         var sceneObjects = GetSceneObjects();
         FindMissingRefs(EditorSceneManager.GetActiveScene().path, sceneObjects);
-        Debug.Log("FindMissingReferences finished scene");
+        Debug.Log($"[FindMissingReferences] finished scene {EditorSceneManager.GetActiveScene().path}");
     }
 
     /// <summary>
     /// Finds all missing references to objects in all enabled scenes in the project.
     /// This works by loading the scenes one by one and checking for missing object references.
     /// </summary>
-    [MenuItem(MENU_ROOT + "Search in all scenes", false, 1)]
-    public static void FindMissingRefsInAllScenes()
+    [MenuItem(MenuRoot + "Search in all scenes enabled in build", false, 1)]
+    public static void FindMissingRefsInAllScenesEnabledInBuild()
     {
+        var currentScene = EditorSceneManager.GetActiveScene().path;
         foreach (var scene in EditorBuildSettings.scenes.Where(s => s.enabled))
         {
             EditorSceneManager.OpenScene(scene.path);
             FindMissingRefsInCurrentScene();
         }
+        EditorSceneManager.OpenScene(currentScene);
     }
 
     /// <summary>
-    /// Finds all missing references to objects in assets (objects from the project window).
+    /// Finds all missing references to objects in all enabled scenes in the project.
+    /// This works by loading the scenes one by one and checking for missing object references.
     /// </summary>
-    [MenuItem(MENU_ROOT + "Search in assets", false, 2)]
+    [MenuItem(MenuRoot + "Search in all scenes", false, 2)]
+    public static void FindMissingRefsInAllScenes()
+    {
+        var currentScene = EditorSceneManager.GetActiveScene().path;
+        var scenePaths = AssetDatabase.FindAssets("t:scene", new string[] { "Assets" })
+            .Select(x => AssetDatabase.GUIDToAssetPath(x));
+        foreach (var path in scenePaths)
+        {
+            EditorSceneManager.OpenScene(path);
+            FindMissingRefsInCurrentScene();
+        }
+        EditorSceneManager.OpenScene(currentScene);
+    }
+
+    /// <summary> Finds all missing references to objects in assets (objects from the project window) </summary>
+    [MenuItem(MenuRoot + "Search in assets", false, 3)]
     public static void FindMissingReferencesInAssets()
     {
         var allAssets = AssetDatabase.GetAllAssetPaths().Where(path => path.StartsWith("Assets/")).ToArray();
         var objs = allAssets.Select(a => AssetDatabase.LoadAssetAtPath(a, typeof(GameObject)) as GameObject).Where(a => a != null).ToArray();
 
         FindMissingRefs("Project", objs);
+        Debug.Log("[FindMissingReferences] Finished all assets");
     }
 
     private static void FindMissingRefs(string context, GameObject[] gameObjects)
     {
-        if (gameObjects == null)
-        {
-            return;
-        }
+        if (gameObjects == null) return;
 
         foreach (var go in gameObjects)
         {
@@ -66,7 +80,6 @@ public class FindMissingReferences
                 if (!component)
                 {
                     Debug.LogError($"Missing Component in GameObject: {GetFullPath(go)}", go);
-
                     continue;
                 }
 
@@ -84,15 +97,13 @@ public class FindMissingReferences
                         string objectReferenceStringValue = string.Empty;
 
                         if (objRefValueMethod != null)
-                        {
                             objectReferenceStringValue = (string)objRefValueMethod.GetGetMethod(true).Invoke(sp, new object[] { });
-                        }
-
-                        if (sp.objectReferenceValue == null
-                            && (sp.objectReferenceInstanceIDValue != 0 || objectReferenceStringValue.StartsWith("Missing")))
-                        {
+#if UNITY_6000_4_OR_NEWER
+                        if (sp.objectReferenceValue == null && (sp.objectReferenceEntityIdValue.IsValid() || objectReferenceStringValue.StartsWith("Missing")))
+#else
+                        if (sp.objectReferenceValue == null && (sp.objectReferenceInstanceIDValue != 0 || objectReferenceStringValue.StartsWith("Missing")))
+#endif
                             ShowError(context, go, component.GetType().Name, ObjectNames.NicifyVariableName(sp.name));
-                        }
                     }
                 }
             }
@@ -107,17 +118,9 @@ public class FindMissingReferences
                    && go.hideFlags == HideFlags.None).ToArray();
     }
 
-    private static void ShowError(string context, GameObject go, string componentName, string propertyName)
-    {
-        var ERROR_TEMPLATE = "Missing Ref in: [{3}]{0}. Component: {1}, Property: {2}";
-
-        Debug.LogError(string.Format(ERROR_TEMPLATE, GetFullPath(go), componentName, propertyName, context), go);
-    }
+    private static void ShowError(string context, GameObject go, string componentName, string propertyName) =>
+        Debug.LogError($"Missing Ref in: [{context}] {GetFullPath(go)}. Component: {componentName}, Property: {propertyName}", go);
 
     private static string GetFullPath(GameObject go)
-    {
-        return go.transform.parent == null
-            ? go.name
-                : GetFullPath(go.transform.parent.gameObject) + "/" + go.name;
-    }
+        => go.transform.parent == null ? go.name : GetFullPath(go.transform.parent.gameObject) + "/" + go.name;
 }
