@@ -44,7 +44,11 @@ public class EditorHelper
         builderMethod.Invoke(null, new object[] { null });
     }
 
-    public static void OpenHierarchyContextMenu(int itemID)
+#if UNITY_6000_4_OR_NEWER
+    public static void OpenHierarchyContextMenu(EntityId itemID)
+#else
+        public static void OpenHierarchyContextMenu(int itemID)
+#endif
     {
         string windowTypeName = "UnityEditor.SceneHierarchyWindow";
         var windowType = typeof(Editor).Assembly.GetType(windowTypeName);
@@ -57,7 +61,29 @@ public class EditorHelper
         MethodInfo builderMethod = hierarchyType.GetMethod("ItemContextClick",
             BindingFlags.Instance | BindingFlags.NonPublic);
         builderMethod.Invoke(sceneHierarchy, new object[] { itemID });
+#if UNITY_6000_6_OR_NEWER
+        if (IsUsingNewHierarchy()) // This is hacky solution. Simulate context click in UIToolkit remains mystery for now
+            window.Close();
+#endif
     }
+
+#if UNITY_6000_6_OR_NEWER
+    public static bool IsUsingNewHierarchy()
+    {
+        // 1. Read the "Use Legacy Hierarchy" checkbox straight from Project Settings > Editor
+        var editorSettings = AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/EditorSettings.asset").FirstOrDefault();
+        if (editorSettings != null)
+        {
+            using var so = new SerializedObject(editorSettings);
+            // Unity 6.6 / 6.7 serializes this toggle as m_UseLegacyHierarchy (or m_HierarchyV2)
+            var legacyProp = so.FindProperty("m_UseLegacyHierarchy");
+            if (legacyProp != null)
+                return !legacyProp.boolValue;
+        }
+
+        return false;
+    }
+#endif
 
     // Component menu
     public static void OpenObjectContextMenu(Rect rect, Object obj)
@@ -69,9 +95,17 @@ public class EditorHelper
         builderMethod.Invoke(null, new object[] { rect, obj, 0 });
     }
 
+#if UNITY_6000_4_OR_NEWER
+    public static void ExpandFolder(EntityId instanceID, bool expand)
+#else
     public static void ExpandFolder(int instanceID, bool expand)
+#endif
     {
+#if UNITY_6000_3_OR_NEWER
+        EntityId[] expandedFolders = InternalEditorUtility.expandedProjectWindowItemIds;
+#else
         int[] expandedFolders = InternalEditorUtility.expandedProjectWindowItems;
+#endif
         bool isExpanded = expandedFolders.Contains(instanceID);
         if (expand == isExpanded) return;
 
@@ -87,9 +121,13 @@ public class EditorHelper
             // OneColumn has only AssetTree, TwoColumn has also FolderTree
             var treeViewController = treeViewControllerField.GetValue(p);
             if (treeViewController == null) continue;
-            var changeGoldingMethod =
+            var changeFoldingMethod =
                 treeViewControllerType.GetMethod("ChangeFolding", BindingFlags.Instance | BindingFlags.NonPublic);
-            changeGoldingMethod.Invoke(treeViewController, new object[] { new int[] { instanceID }, expand });
+#if UNITY_6000_3_OR_NEWER
+            changeFoldingMethod.Invoke(treeViewController, new object[] { new EntityId[] { instanceID }, expand });
+#else
+            changeFoldingMethod.Invoke(treeViewController, new object[] { new int[] { instanceID }, expand });
+#endif
             EditorWindow pw = (EditorWindow)p;
             pw.Repaint();
         }
