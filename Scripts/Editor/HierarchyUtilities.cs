@@ -1,5 +1,6 @@
 using UnityEditor;
 using UnityEditor.Presets;
+using UnityEditorInternal;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -19,7 +20,13 @@ public class HierarchyUtilities
             if (stream.GetEventType(i) == ObjectChangeKind.CreateGameObjectHierarchy)
             {
                 stream.GetCreateGameObjectHierarchyEvent(i, out var createGameObjectHierarchyEvent);
+#if UNITY_6000_4_OR_NEWER
+                var go = EditorUtility.EntityIdToObject(createGameObjectHierarchyEvent.entityId) as GameObject;
+#elif UNITY_6000_3_OR_NEWER
+                var go = EditorUtility.EntityIdToObject(createGameObjectHierarchyEvent.instanceId) as GameObject;
+#else
                 var go = EditorUtility.InstanceIDToObject(createGameObjectHierarchyEvent.instanceId) as GameObject;
+#endif
                 if (!go) return;
                 var spriteRenderer = go.GetComponent<SpriteRenderer>();
                 if (!spriteRenderer) return;

@@ -8,6 +8,9 @@ using static EditorHelper;
 using static MyGUI;
 using Object = UnityEngine.Object;
 
+#if UNITY_6000_7_OR_NEWER
+[Unity.Scripting.LifecycleManagement.NoAutoStaticsCleanup]
+#endif
 public class FindAssetUsages : MyEditorWindow
 {
     private static TreeViewComparer treeViewComparer = new();
@@ -105,7 +108,11 @@ public class FindAssetUsages : MyEditorWindow
         }
         else if (IsNonAssetGameObject(obj))
         {
+#if UNITY_6000_4_OR_NEWER
+            objectPath = obj.GetEntityId().ToString();
+#else
             objectPath = obj.GetInstanceID().ToString();
+#endif
         }
 
         bool finished = false;
@@ -136,7 +143,11 @@ public class FindAssetUsages : MyEditorWindow
         }
         else if (IsNonAssetGameObject(obj))
         {
+#if UNITY_6000_4_OR_NEWER
+            objectPath = obj.GetEntityId().ToString();
+#else
             objectPath = obj.GetInstanceID().ToString();
+#endif
         }
 
         List<SearchItem> resultItems = new();

@@ -235,7 +235,11 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
     // Drag started from ObjectRow
     private void DragStarted(Object obj, bool isSelected)
     {
+#if UNITY_6000_4_OR_NEWER
+        DragAndDrop.SetGenericData(GetEntityId().ToString(), true);
+#else
         DragAndDrop.SetGenericData(GetInstanceID().ToString(), true);
+#endif
         // If path is empty (non-asset), paths array will not contain this path - probably internal property thing
         DragAndDrop.paths = DragAndDrop.objectReferences.Select(x => AssetDatabase.GetAssetPath(x)).ToArray();
     }
@@ -274,7 +278,11 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
         }
         else
         {
+#if UNITY_6000_4_OR_NEWER
+            var dragData = DragAndDrop.GetGenericData(GetEntityId().ToString());
+#else
             var dragData = DragAndDrop.GetGenericData(GetInstanceID().ToString());
+#endif
             bool preventDrop = dragData is bool b && b && DragAndDrop.objectReferences.Length == 1 &&
                 DragAndDrop.objectReferences[0] == obj; // Same object row
             if (preventDrop) // Prevent accidental drags on itself
@@ -455,10 +463,17 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
         if (history.Count > historyLimit)
             RemoveAllHistory(x => history.IndexOf(x) >= historyLimit);
         //history = history.Take(historyLimit).ToList();
+#if UNITY_6000_4_OR_NEWER
+        groupedHistory = history.Where(x => !pinned.Contains(x))
+            .OrderBy(x => Path.GetExtension(AssetDatabase.GetAssetPath(x)))
+            .ThenBy(x => x.GetType().Name).ThenBy(x => x.name).
+            ThenBy(x => x.GetEntityId()).ToList();
+#else
         groupedHistory = history.Where(x => !pinned.Contains(x))
             .OrderBy(x => Path.GetExtension(AssetDatabase.GetAssetPath(x)))
             .ThenBy(x => x.GetType().Name).ThenBy(x => x.name).
             ThenBy(x => x.GetInstanceID()).ToList();
+#endif
         groupedHistory.InsertRange(0, pinned);
     }
 
@@ -489,6 +504,9 @@ public class AssetsHistory : MyEditorWindow, IHasCustomMenu
     #endregion
 }
 
+#if UNITY_6000_7_OR_NEWER
+[Unity.Scripting.LifecycleManagement.NoAutoStaticsCleanup]
+#endif
 public class AssetImportHistory : AssetPostprocessor
 {
     public static Action<Object> assetImported;

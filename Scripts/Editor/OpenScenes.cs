@@ -5,6 +5,9 @@ using UnityEngine;
 using static EditorHelper;
 using static MyGUI;
 
+#if UNITY_6000_7_OR_NEWER
+[Unity.Scripting.LifecycleManagement.NoAutoStaticsCleanup]
+#endif
 public class OpenScenes : MyEditorWindow
 {
     private static TreeViewComparer treeViewComparer = new();

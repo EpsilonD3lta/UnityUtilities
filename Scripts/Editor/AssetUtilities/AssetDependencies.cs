@@ -8,9 +8,15 @@ using static EditorHelper;
 using static MyGUI;
 using Object = UnityEngine.Object;
 
+#if UNITY_6000_7_OR_NEWER
+[Unity.Scripting.LifecycleManagement.NoAutoStaticsCleanup]
+#endif
 public class AssetDependencies : MyEditorWindow, IHasCustomMenu
 {
     private const int rowHeight = objectRowHeight;
+#if UNITY_6000_7_OR_NEWER
+    [Unity.Scripting.LifecycleManagement.NoAutoStaticsCleanup]
+#endif
     private static class Styles
     {
         public static GUIStyle foldoutStyle = new GUIStyle();

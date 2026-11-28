@@ -23,6 +23,7 @@ public class FindMissingReferences
 
     /// <summary>
     /// Finds all missing references to objects in all enabled scenes in the project.
+    /// 
     /// This works by loading the scenes one by one and checking for missing object references.
     /// </summary>
     [MenuItem(MenuRoot + "Search in all scenes enabled in build", false, 1)]

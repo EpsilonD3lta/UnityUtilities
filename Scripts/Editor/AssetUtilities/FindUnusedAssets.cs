@@ -6,6 +6,9 @@ using UnityEngine;
 using static EditorHelper;
 using static MyGUI;
 
+#if UNITY_6000_7_OR_NEWER
+[Unity.Scripting.LifecycleManagement.NoAutoStaticsCleanup]
+#endif
 public class FindUnusedAssets : MyEditorWindow
 {
     private static readonly string[] excludedExtensions =

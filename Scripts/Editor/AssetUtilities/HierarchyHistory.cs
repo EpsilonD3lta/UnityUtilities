@@ -65,7 +65,13 @@ public class HierarchyHistory : AssetsHistory
 
     protected override void Test()
     {
+#if UNITY_6000_4_OR_NEWER
+        var gos = Object.FindObjectsByType<Transform>(FindObjectsInactive.Include);
+#elif UNITY_6000_0_OR_NEWER
+        var gos = Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+#else
         var gos = FindObjectsOfType<Transform>(true);
+#endif
         var objs = GlobalObjectId.GlobalObjectIdentifierToObjectSlow(
             ConvertToUnpackedGid(Parse(
                 "GlobalObjectId_V1-2-2fd19a05ecb802843bd51e0f33d4a32b-4983886930841126834-1308519948")));

@@ -6,9 +6,15 @@ using UnityEngine;
 using static EditorHelper;
 using Object = UnityEngine.Object;
 
+#if UNITY_6000_7_OR_NEWER
+[Unity.Scripting.LifecycleManagement.NoAutoStaticsCleanup]
+#endif
 public static class MyGUI
 {
     public const int objectRowHeight = 16;
+#if UNITY_6000_7_OR_NEWER
+    [Unity.Scripting.LifecycleManagement.NoAutoStaticsCleanup]
+#endif
     public static class Styles
     {
         public static GUIStyle insertion = new("TV Insertion");
@@ -259,7 +265,11 @@ public static class MyGUI
             else if (IsNonAssetGameObject(obj))
             {
                 if (Selection.transforms.Length > 0) // Just to be sure it's really a HierarchyGameobject
+#if UNITY_6000_4_OR_NEWER
+                    OpenHierarchyContextMenu(Selection.transforms[0].gameObject.GetEntityId());
+#else
                     OpenHierarchyContextMenu(Selection.transforms[0].gameObject.GetInstanceID());
+#endif
             }
         }
 
@@ -282,7 +292,11 @@ public static class MyGUI
         void PingButtonMiddleClick(Object obj, Action pingButtonMiddleClick = null)
         {
             if (Event.current.modifiers == EventModifiers.Alt)
+#if UNITY_6000_4_OR_NEWER
+                Debug.Log($"{GlobalObjectId.GetGlobalObjectIdSlow(obj)} InstanceID: {obj.GetEntityId()}");
+#else
                 Debug.Log($"{GlobalObjectId.GetGlobalObjectIdSlow(obj)} InstanceID: {obj.GetInstanceID()}");
+#endif
             else pingButtonMiddleClick?.Invoke();
         }
 

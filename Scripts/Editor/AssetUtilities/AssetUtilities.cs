@@ -1,4 +1,3 @@
-using System;
 using System.Linq;
 using UnityEditor;
 using UnityEditor.ShortcutManagement;
@@ -10,9 +9,7 @@ public class AssetUtilities
     public static void MarkDirty()
     {
         foreach (var obj in Selection.objects)
-        {
             EditorUtility.SetDirty(obj);
-        }
     }
 
     [MenuItem("Assets/Force Reserialize", priority = 39)]
@@ -25,8 +22,13 @@ public class AssetUtilities
     [Shortcut("Save ShaderGraphs", KeyCode.S, ShortcutModifiers.Control | ShortcutModifiers.Shift)]
     public static void SaveShaderGraphs()
     {
+#if UNITY_6000_4_OR_NEWER
+        var assembly = UnityEngine.Assemblies.CurrentAssemblies.GetLoadedAssemblies()
+            .FirstOrDefault(x => x.GetName().Name == "Unity.ShaderGraph.Editor");
+#else
         var assembly = AppDomain.CurrentDomain.GetAssemblies()
             .FirstOrDefault(x => x.GetName().Name == "Unity.ShaderGraph.Editor");
+#endif
         string windowTypeName = "UnityEditor.ShaderGraph.Drawing.MaterialGraphEditWindow";
         var windowType = assembly.GetType(windowTypeName);
         Object[] shaderGraphWindows = Resources.FindObjectsOfTypeAll(windowType);

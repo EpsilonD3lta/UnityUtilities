@@ -6,17 +6,22 @@ using UnityEngine.SceneManagement;
 
 // Modified from: http://wiki.unity3d.com/index.php?title=FindMissingScripts&oldid=17367
 // License: Content is available under Creative Commons Attribution Share Alike https://www.apache.org/licenses/LICENSE-2.0
+#if UNITY_6000_7_OR_NEWER
+[Unity.Scripting.LifecycleManagement.NoAutoStaticsCleanup]
+#endif
 public class FindMissingScripts : EditorWindow
 {
-    string folderPath = "";
+    private static int missingCount = -1;
+
+    private string folderPath = "";
+
     [MenuItem("Tools/Find Missing Scripts")]
     public static void FindMissingScriptsShow()
     {
         EditorWindow.GetWindow(typeof(FindMissingScripts));
     }
 
-    static int missingCount = -1;
-    void OnGUI()
+    private void OnGUI()
     {
         EditorGUILayout.LabelField("Folder path from Assets. Start with /, eg.: /Prefabs");
         folderPath = EditorGUILayout.TextField(folderPath);

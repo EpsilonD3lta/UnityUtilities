@@ -14,6 +14,9 @@ using Debug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
 
 // Menu item shortcuts: % == ctrl, # == shift, & == alt, _ == no modifier, LEFT, RIGHT, UP, DOWN, F1..F12, HOME, END, PGUP, PGDN
+#if UNITY_6000_7_OR_NEWER
+[Unity.Scripting.LifecycleManagement.NoAutoStaticsCleanup]
+#endif
 public class FileUtilities
 {
     [MenuItem("Assets/File/Copy GUID %#c", priority = 70)]
@@ -236,23 +239,31 @@ public class FileUtilities
     }
 
     [OnOpenAsset(0)]
+#if UNITY_6000_4_OR_NEWER
+    public static bool OnOpenWithModifiers(EntityId instanceID, int line)
+#else
     public static bool OnOpenWithModifiers(int instanceID, int line)
+#endif
     {
         if (Event.current == null) return false;
         if (Event.current.modifiers == EventModifiers.None) return false;
+#if UNITY_6000_3_OR_NEWER
+        Object asset = EditorUtility.EntityIdToObject(instanceID);
+#else
+        Object asset = EditorUtility.InstanceIDToObject(instanceID);
+#endif
         if (Event.current.modifiers == EventModifiers.Alt)
         {
-            OpenAsTextfile(AssetDatabase.GetAssetPath(EditorUtility.InstanceIDToObject(instanceID)));
+            OpenAsTextfile(AssetDatabase.GetAssetPath(asset));
             return true;
         }
         else if (Event.current.modifiers == EventModifiers.Shift)
         {
-            OpenMetafile(AssetDatabase.GetAssetPath(EditorUtility.InstanceIDToObject(instanceID)));
+            OpenMetafile(AssetDatabase.GetAssetPath(asset));
             return true;
         }
         else if (Event.current.modifiers == (EventModifiers.Alt | EventModifiers.Command)) // Command == Windows key
         {
-            Object asset = EditorUtility.InstanceIDToObject(instanceID);
             string assetPath = AssetDatabase.GetAssetPath(asset);
             EditorUtility.RevealInFinder(assetPath);
             return true;
@@ -261,9 +272,17 @@ public class FileUtilities
     }
 
     [OnOpenAsset(1)]
+#if UNITY_6000_4_OR_NEWER
+    public static bool OnOpenFolder(EntityId instanceID, int line)
+#else
     public static bool OnOpenFolder(int instanceID, int line)
+#endif
     {
+#if UNITY_6000_3_OR_NEWER
+        Object asset = EditorUtility.EntityIdToObject(instanceID);
+#else
         Object asset = EditorUtility.InstanceIDToObject(instanceID);
+#endif
         string assetPath = AssetDatabase.GetAssetPath(asset);
         if (AssetDatabase.IsValidFolder(assetPath))
         {
@@ -283,9 +302,17 @@ public class FileUtilities
     }
 
     [OnOpenAsset(2)]
+#if UNITY_6000_4_OR_NEWER
+    public static bool OnOpenFBX(EntityId instanceID, int line)
+#else
     public static bool OnOpenFBX(int instanceID, int line)
+#endif
     {
+#if UNITY_6000_3_OR_NEWER
+        Object asset = EditorUtility.EntityIdToObject(instanceID);
+#else
         Object asset = EditorUtility.InstanceIDToObject(instanceID);
+#endif
         string assetPath = AssetDatabase.GetAssetPath(asset);
         if (assetPath.EndsWith(".fbx", StringComparison.OrdinalIgnoreCase))
         {
@@ -296,9 +323,17 @@ public class FileUtilities
     }
 
     [OnOpenAsset(3)]
+#if UNITY_6000_4_OR_NEWER
+    public static bool OnOpenImage(EntityId instanceID, int line)
+#else
     public static bool OnOpenImage(int instanceID, int line)
+#endif
     {
+#if UNITY_6000_3_OR_NEWER
+        Object asset = EditorUtility.EntityIdToObject(instanceID);
+#else
         Object asset = EditorUtility.InstanceIDToObject(instanceID);
+#endif
         string assetPath = AssetDatabase.GetAssetPath(asset);
         if (Regex.IsMatch(assetPath, @".*\.png$|.*\.jpg$|.*\.jpeg$|.*\.bmp$|.*\.tif$|.*\.psd$|.*\.psb$", RegexOptions.IgnoreCase))
         {
@@ -309,9 +344,17 @@ public class FileUtilities
     }
 
     [OnOpenAsset(4)]
+#if UNITY_6000_4_OR_NEWER
+    public static bool OnOpenAudio(EntityId instanceID, int line)
+#else
     public static bool OnOpenAudio(int instanceID, int line)
+#endif
     {
+#if UNITY_6000_3_OR_NEWER
+        Object asset = EditorUtility.EntityIdToObject(instanceID);
+#else
         Object asset = EditorUtility.InstanceIDToObject(instanceID);
+#endif
         string assetPath = AssetDatabase.GetAssetPath(asset);
         if (Regex.IsMatch(assetPath, @".*\.wav$|.*\.flac$|.*\.ogg$|.*\.mp3$|.*\.mp4$|.*\.aiff$", RegexOptions.IgnoreCase))
         {
@@ -322,9 +365,17 @@ public class FileUtilities
     }
 
     [OnOpenAsset(5)]
+#if UNITY_6000_4_OR_NEWER
+    public static bool OnOpenText(EntityId instanceID, int line)
+#else
     public static bool OnOpenText(int instanceID, int line)
+#endif
     {
+#if UNITY_6000_3_OR_NEWER
+        Object asset = EditorUtility.EntityIdToObject(instanceID);
+#else
         Object asset = EditorUtility.InstanceIDToObject(instanceID);
+#endif
         string assetPath = AssetDatabase.GetAssetPath(asset);
         // Last expression of the regex is for files without '.' in the name == no file extension
         if (Regex.IsMatch(assetPath, @".*\.txt$|.*\.json$|.*\.md$|.*\.java$|.*\.mm$|^([^.]+)$", RegexOptions.IgnoreCase))
@@ -338,13 +389,25 @@ public class FileUtilities
     // This should fold out/in folders on double click
     // Does not work well in two columns layout
     //[OnOpenAsset(1)]
+#if UNITY_6000_4_OR_NEWER
+    public static bool OnOpenFolder2(EntityId instanceID, int line)
+#else
     public static bool OnOpenFolder2(int instanceID, int line)
+#endif
     {
+#if UNITY_6000_3_OR_NEWER
+        Object asset = EditorUtility.EntityIdToObject(instanceID);
+#else
         Object asset = EditorUtility.InstanceIDToObject(instanceID);
+#endif
         string assetPath = AssetDatabase.GetAssetPath(asset);
         if (AssetDatabase.IsValidFolder(assetPath))
         {
+#if UNITY_6000_3_OR_NEWER
+            EntityId[] expandedFolders = InternalEditorUtility.expandedProjectWindowItemIds;
+#else
             int[] expandedFolders = InternalEditorUtility.expandedProjectWindowItems;
+#endif
             bool isExpanded = expandedFolders.Contains(instanceID);
             ExpandFolder(instanceID, !isExpanded);
             return true;
@@ -352,9 +415,17 @@ public class FileUtilities
         else return false;
     }
 
+#if UNITY_6000_4_OR_NEWER
+    public static void ExpandFolder(EntityId instanceID, bool expand)
+#else
     public static void ExpandFolder(int instanceID, bool expand)
+#endif
     {
+#if UNITY_6000_3_OR_NEWER
+        EntityId[] expandedFolders = InternalEditorUtility.expandedProjectWindowItemIds;
+#else
         int[] expandedFolders = InternalEditorUtility.expandedProjectWindowItems;
+#endif
         bool isExpanded = expandedFolders.Contains(instanceID);
         if (expand == isExpanded) return;
 
@@ -378,7 +449,11 @@ public class FileUtilities
             if (treeViewController == null) continue;
             var changeGoldingMethod =
                 treeViewControllerType.GetMethod("ChangeFolding", BindingFlags.Instance | BindingFlags.NonPublic);
+#if UNITY_6000_4_OR_NEWER
+            changeGoldingMethod.Invoke(treeViewController, new object[] { new EntityId[] { instanceID }, expand });
+#else
             changeGoldingMethod.Invoke(treeViewController, new object[] { new int[] { instanceID }, expand });
+#endif
             EditorWindow pw = (EditorWindow)p as EditorWindow;
             pw.Repaint();
         }
